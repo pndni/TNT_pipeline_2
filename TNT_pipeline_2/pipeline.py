@@ -506,6 +506,8 @@ def get_parsers():
         helpstr += f'which do not have the {filter_par_short} parameter will be selected.'
         parser_p.add_argument(f'--{filter_par}', type=str, help=helpstr, metavar=filter_par_short.upper(),
                               nargs='?', const=None, default=argparse.SUPPRESS)
+    parser_p.add_argument('--nipype_plugin', type=str, choices=['Linear', 'MultiProc'])
+    parser_p.add_argument('--n_proc', type=int)
     return parser, parser_p, parser_g
 
 
@@ -558,7 +560,12 @@ def main():
                 if not args.working_directory.exists():
                     raise FileNotFoundError('Specified working directory does not exist')
                 wf.base_dir = str(args.working_directory.resolve())
-            wf.run()
+            plugin_args = {}
+            if args.n_proc is not None:
+                if args.nipype_plugin != 'MultiProc':
+                    raise ValueError('--n_proc may only be specified with --nipype_plugin=MultiProc')
+                plugin_args['n_proc'] = args.n_proc
+            wf.run(plugin=args.nipype_plugin, plugin_args=plugin_args)
     elif args.analysis_level == 'group':
         wf = group_workflow(args.output_folder.resolve(), not args.skip_validation)
         if args.working_directory is not None:
