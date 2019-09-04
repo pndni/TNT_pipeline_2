@@ -511,6 +511,11 @@ def get_parsers():
     return parser, parser_p, parser_g
 
 
+def _get_main_parser():
+    """Used for generating documentation"""
+    return get_parsers()[0]
+
+
 def main():
     parser, parser_p, parser_g = get_parsers()
     # first check if the user requested the subcommand help. This prevents them
