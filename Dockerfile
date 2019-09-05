@@ -75,7 +75,7 @@ RUN wget --output-document=/root/fslinstaller.py https://fsl.fmrib.ox.ac.uk/fsld
 # python
 RUN yum install -y python36 python36-pip python36-devel libstdc++-static && \
     pip3.6 --no-cache-dir install numpy==1.16.3 bids-validator==1.2.4 pybids==0.9.2 nibabel==2.4.0 duecredit==0.7.0 \
-    git+https://github.com/stilley2/nipype.git@ac54739effc8fdd7d89a57b5aac91b3f7cefd760 \
+    git+https://github.com/stilley2/nipype.git@221bfb78b3c33d596588f7a3d90ea36329957010 \
     git+https://github.com/pndni/pndni_utils.git@62e71a3ef8f52b70a83bc4f04e5e83583ec8b86f \
     git+https://github.com/pndni/pndniworkflows.git@5683bb0ca3fe6d90f4d53c6fe06c30c1212c62f0
 
