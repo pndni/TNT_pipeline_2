@@ -104,4 +104,5 @@ COPY template /template
 COPY setup.py /opt/TNT_pipeline_2/
 COPY TNT_pipeline_2 /opt/TNT_pipeline_2/TNT_pipeline_2
 RUN pip3.6 install -e /opt/TNT_pipeline_2/
+ENV LC_ALL=en_US.utf-8
 ENTRYPOINT ["TNT_pipeline_2"]
