@@ -469,35 +469,49 @@ def _get_label_file(basefile, argstr):
     return labelfile
 
 
-def get_parsers():
+# TODO BIDS style point file?
+def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--help-participant', action='store_true', help='show help for participant subcommand')
-    parser.add_argument('--help-group', action='store_true', help='show help for group subcommand')
-    parser.add_argument('input_dataset', type=Path)
-    parser.add_argument('output_folder', type=Path)
-    subparsers = parser.add_subparsers(metavar='participant|group', title='analysis_level', help='additional help')
-    parser_g = subparsers.add_parser('group', help='use --help-group for more information')
-    parser_g.set_defaults(analysis_level='group')
-    parser_g.add_argument('--graph_output', type=str)
-    parser_g.add_argument('--working_directory', type=Path)
-    parser_g.add_argument('--skip_validation', action='store_true', help='Skip bids validation')
-    parser_p = subparsers.add_parser('participant', help='use --help-particpant for more information')
-    parser_p.set_defaults(analysis_level='participant')
-    parser_p.add_argument('--participant_labels', nargs='+')
-    parser_p.add_argument('--model', type=Path, default='/template/SYS_808.nii')
-    parser_p.add_argument('--model_space', type=str, default='SYS808')
-    parser_p.add_argument('--atlas', type=Path, default='/template/SYS808_atlas_labels_nomiddle.nii')
-    parser_p.add_argument('--atlas_labels', type=Path)
-    parser_p.add_argument('--tags', type=Path, default='/template/ntags_1000_prob_90_nobg_sys808.tag')
-    parser_p.add_argument('--tag_labels', type=Path)
-    parser_p.add_argument('--model_brain_mask', type=Path, default='/template/SYS808_brainmask.nii')
-    parser_p.add_argument('--bet_frac', type=float, default=0.5)
-    parser_p.add_argument('--bet_vertical_gradient', type=float, default=0.0)
-    parser_p.add_argument('--debug', action='store_true')
-    parser_p.add_argument('--debug_io', action='store_true')
-    parser_p.add_argument('--graph_output', type=str)
-    parser_p.add_argument('--working_directory', type=Path)
-    parser_p.add_argument('--skip_validation', action='store_true', help='Skip bids validation')
+    parser.add_argument('input_dataset', type=Path, help='Location of `BIDS <https://bids-specification.readthedocs.io/en/stable/>`_ dataset')
+    parser.add_argument('output_folder', type=Path, help='Output directory')
+    parser.add_argument('analysis_level', type=str, choices=['participant', 'group'],
+                        help='"participant" runs the main pipeline on each subject independently. "group" consolidates the results.')
+    parser_b = parser.add_argument_group('General Arguments', description='Arguments for both group and participant analysis levels')
+    parser_b.add_argument('--working_directory', type=Path, help='(Passed to the nipype workflow)')
+    parser_b.add_argument('--skip_validation', action='store_true', help='Skip bids validation')
+    # parser_g = parser.add_argument_group('group', description='Arguments for group analysis level')
+    parser_p = parser.add_argument_group('Participant Arguments', description='Arguments for participant analysis level')
+    parser_p.add_argument('--participant_labels', nargs='+', metavar='PARTICIPANT_LABEL',
+                          help='Subjects on which to run the pipeline. If not specified, run on all.')
+    parser_p.add_argument('--model', type=Path, default='/template/SYS_808.nii',
+                          help='A model/template brain in the same space as "--atlas" and "--tags". '
+                               'Will be registered with T1w images to map template space to native space.')
+    parser_p.add_argument('--model_space', type=str, default='SYS808',
+                          help='The name of the model space. Used only for naming files.')
+    parser_p.add_argument('--atlas', type=Path, default='/template/SYS808_atlas_labels_nomiddle.nii',
+                          help='Atlas in model/template space subdividing the brain into lobes. '
+                               'This atlas will be transformed to native space and combined with the GM and WM maps.')
+    parser_p.add_argument('--atlas_labels', type=Path,
+                          help='A BIDS style label file (i.e. a tab-separated values file with "index" and "name" columns '
+                               'described in `BEP011 <https://docs.google.com/document/d/1YG2g4UkEio4t_STIBOqYOwneLEs1emHIXbGKynx7V0Y/edit#heading=h.g35a71g5bvrk>`_). '
+                               'Describes the lobes in "atlas". If not specified will look for a file with the same '
+                               'name ias "--atlas" but ending in "_labels.tsv".')
+    parser_p.add_argument('--tags', type=Path, default='/template/ntags_1000_prob_90_nobg_sys808.tag',
+                          help='`An MNI point file <https://en.wikibooks.org/wiki/MINC/SoftwareDevelopment/Tag_file_format_reference>`_ '
+                               'labeling GM, WM, and CSF.')
+    parser_p.add_argument('--tag_labels', type=Path, help='A label file mapping the labels in "--tags" to tissue names.')
+    parser_p.add_argument('--model_brain_mask', type=Path, default='/template/SYS808_brainmask.nii',
+                          help='Brain mask in model/template space.')
+    parser_p.add_argument('--bet_frac', type=float, default=0.5,
+                          help='Argument passed to FSL\'s BET')
+    parser_p.add_argument('--bet_vertical_gradient', type=float, default=0.0,
+                          help='Argument passed to FSL\'s BET')
+    parser_p.add_argument('--debug', action='store_true',
+                          help='Set ANTs iteration count to 1 to make the workflow fast.')
+    parser_p.add_argument('--debug_io', action='store_true',
+                          help='Bypass main workflow to test the input/output logic.')
+    parser_p.add_argument('--graph_output', type=str,
+                          help='Generate a graph of the workflow and save as "--graph_output".')
     filter_parameters = ['filter_acquisition', 'filter_reconstruction', 'filter_run']
     for filter_par in filter_parameters:
         filter_par_short = filter_par.split('_')[1]
@@ -506,42 +520,25 @@ def get_parsers():
         helpstr += f'which do not have the {filter_par_short} parameter will be selected.'
         parser_p.add_argument(f'--{filter_par}', type=str, help=helpstr, metavar=filter_par_short.upper(),
                               nargs='?', const=None, default=argparse.SUPPRESS)
-    parser_p.add_argument('--nipype_plugin', type=str, choices=['Linear', 'MultiProc'])
-    parser_p.add_argument('--n_proc', type=int)
-    return parser, parser_p, parser_g
-
-
-def _get_main_parser():
-    """Used for generating documentation"""
-    return get_parsers()[0]
+    parser_p.add_argument('--nipype_plugin', type=str, choices=['Linear', 'MultiProc'],
+                          help='Specify the nipype workflow execution plugin. "Linear" will aid debugging.')
+    parser_p.add_argument('--n_proc', type=int,
+                          help='The number of processors to use with the MultiProc plugin. If not set determine automatically.')
+    return parser
 
 
 def main():
-    parser, parser_p, parser_g = get_parsers()
-    # first check if the user requested the subcommand help. This prevents them
-    # from having to specify dummy names for input_dataset and output_folder
-    if len(sys.argv) <= 1:
-        parser.print_help()
-        sys.exit(1)
-    if sys.argv[1] == '--help-participant':
-        parser_p.print_help()
-        sys.exit(1)
-    if sys.argv[1] == '--help-group':
-        parser_g.print_help()
-        sys.exit(1)
+    parser = get_parser()
     args = parser.parse_args()
-    if 'analysis_level' not in args:
-        parser.print_help()
-        sys.exit(1)
-    if args.atlas_labels is None:
-        args.atlas_labels = _get_label_file(args.atlas, '--atlas_labels')
-    if args.tag_labels is None:
-        args.tag_labels = _get_label_file(args.tags, '--tag_labels')
-    bids_filter = {}
-    for filter_par in ['filter_acquisition', 'filter_reconstruction', 'filter_run']:
-        if filter_par in args:
-            bids_filter[filter_par.split('_')[1]] = getattr(args, filter_par)
     if args.analysis_level == 'participant':
+        if args.atlas_labels is None:
+            args.atlas_labels = _get_label_file(args.atlas, '--atlas_labels')
+        if args.tag_labels is None:
+            args.tag_labels = _get_label_file(args.tags, '--tag_labels')
+        bids_filter = {}
+        for filter_par in ['filter_acquisition', 'filter_reconstruction', 'filter_run']:
+            if filter_par in args:
+                bids_filter[filter_par.split('_')[1]] = getattr(args, filter_par)
         wf = wrapper_workflow(str(args.input_dataset.resolve()),
                               str(args.output_folder.resolve()),
                               args.participant_labels,
