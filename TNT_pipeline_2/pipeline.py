@@ -42,7 +42,12 @@ def t1_workflow(T1_scan, entities,
                 atlas_labels_str,
                 tissue_labels_str,
                 tissue_and_atlas_labels, tissue_and_atlas_labels_str,
-                outbidslayout, args):
+                outbidslayout, args,
+                subcortical_labels=None, subcortical_labels_str=None):
+    if args.subcortical:
+        if subcortical_labels is None or subcortical_labels_str is None:
+            raise ValueError('If args.subcortical is True, subcortical_labels '
+                             'and subcortical_labels_str must not be None')
     wf = pe.Workflow(name='T1_' + '_'.join((f'{key}-{val}' for key, val in entities.items())))
     io_out_wf = output.io_out_workflow(outbidslayout,
                                        entities,
@@ -50,7 +55,9 @@ def t1_workflow(T1_scan, entities,
                                        args.model_space,
                                        atlas_labels_str,
                                        tissue_labels_str,
-                                       tissue_and_atlas_labels_str)
+                                       tissue_and_atlas_labels_str,
+                                       subcortical=args.subcortical,
+                                       subcortical_model_space=args.subcortical_model_space)
 
     if args.debug_io:
         renametr = pe.Node(Rename(format_string='%(base)s.h5', parse_string='(?P<base>.*).nii(.gz)?'), 'renametr')
@@ -72,8 +79,20 @@ def t1_workflow(T1_scan, entities,
         wf.connect([(renametr, io_out_wf, [('out_file', 'inputspec.transform')]),
                     (renameitr, io_out_wf, [('out_file', 'inputspec.inverse_transform')]),
                     (renamefeatures, io_out_wf, [('out_file', 'inputspec.features')])])
+        if args.subcortical:
+            renamesubtr = pe.Node(Rename(format_string='%(base)s.h5', parse_string='(?P<base>.*).nii(.gz)?'), 'renamesubtr')
+            renamesubitr = pe.Node(Rename(format_string='%(base)s.h5', parse_string='(?P<base>.*).nii(.gz)?'), 'renamesubitr')
+            renamesubtr.inputs.in_file = T1_scan
+            renamesubitr.inputs.in_file = T1_scan
+            io_out_wf.inputs.inputspec.warped_subcortical_model = T1_scan
+            io_out_wf.inputs.inputspec.native_subcortical_atlas = T1_scan
+            io_out_wf.inputs.inputspec.subcortical_stats = T1_scan
+            wf.connect([(renamesubtr, io_out_wf, [('out_file', 'inputspec.subcortical_transform')]),
+                        (renamesubitr, io_out_wf, [('out_file', 'inputspec.subcortical_inverse_transform')])])
     else:
-        main_wf = main_workflow(tissue_and_atlas_labels, debug=args.debug)
+        main_wf = main_workflow(tissue_and_atlas_labels, debug=args.debug,
+                                subcortical=args.subcortical,
+                                subcort_statslabels=subcortical_labels)
         main_wf.inputs.inputspec.bet_frac = args.bet_frac
         main_wf.inputs.inputspec.model = args.model
         main_wf.inputs.inputspec.tags = args.tags
@@ -81,7 +100,11 @@ def t1_workflow(T1_scan, entities,
         main_wf.inputs.inputspec.model_brain_mask = args.model_brain_mask
         main_wf.inputs.inputspec.bet_vertical_gradient = args.bet_vertical_gradient
         main_wf.inputs.inputspec.T1 = T1_scan
-        connectspec = [(f'outputspec.{connectname}', f'inputspec.{connectname}') for connectname in output.get_outputinfo(args.model_space).keys()]
+        if args.subcortical:
+            main_wf.inputs.inputspec.subcortical_model = args.subcortical_model
+            main_wf.inputs.inputspec.subcortical_atlas = args.subcortical_atlas
+        connectspec = [(f'outputspec.{connectname}', f'inputspec.{connectname}')
+                       for connectname in output.get_outputinfo(args.model_space, args.subcortical, args.subcortical_model_space).keys()]
         wf.connect([(main_wf, io_out_wf, connectspec)])
 
     crashdump_dir = outbidslayout.build_path({'rootdir': 'logs', **entities}, strict=True)
@@ -113,6 +136,11 @@ def wrapper_workflow(args):
     tissue_labels_str = _labels_to_str(tissue_labels)
     tissue_and_atlas_labels = utils.combine_labels(tissue_labels, atlas_labels)
     tissue_and_atlas_labels_str = _labels_to_str(tissue_and_atlas_labels)
+    subcortical_labels = None
+    subcortical_labels_str = None
+    if args.subcortical:
+        subcortical_labels = utils.read_labels(args.tag_labels)
+        subcortical_labels_str = _labels_to_str(subcortical_labels)
 
     wf = pe.Workflow(name='wrapper')
     for T1_scan, T1_entities in _get_scans(inbidslayout, args.bids_filter,
@@ -123,7 +151,9 @@ def wrapper_workflow(args):
                             tissue_and_atlas_labels,
                             tissue_and_atlas_labels_str,
                             outbidslayout,
-                            args)
+                            args,
+                            subcortical_labels=subcortical_labels,
+                            subcortical_labels_str=subcortical_labels_str)
         wf.add_nodes([tmpwf])
     return wf
 
@@ -146,6 +176,8 @@ def run_participant(args):
         args.atlas_labels = _get_label_file(args.atlas, '--atlas_labels')
     if args.tag_labels is None:
         args.tag_labels = _get_label_file(args.tags, '--tag_labels')
+    if args.subcortical and args.subcortical_labels is None:
+        args.subcortical_labels = _get_label_file(args.subcortical_atlas, '--subcortical_labels')
     bids_filter = {}
     for filter_par in ['filter_session', 'filter_acquisition', 'filter_reconstruction', 'filter_run']:
         if filter_par in args:
@@ -238,6 +270,20 @@ def get_parser():
                           help='Specify the nipype workflow execution plugin. "Linear" will aid debugging.')
     parser_p.add_argument('--n_proc', type=int,
                           help='The number of processors to use with the MultiProc plugin. If not set determine automatically.')
+    parser_p.add_argument('--subcortical', action='store_true',
+                          help='Run subcortical pipeline')
+    parser_p.add_argument('--subcortical_model', type=_resolve_path,
+                          help='A model/template in the same space as "--subcortical_atlas". '
+                               'Will be registered with each subject. REQUIRED if "--subcortical" is set.')
+    parser_p.add_argument('--subcortical_model_space', type=str,
+                          help='The name of the subcortical model space. Only used for naming files. '
+                               'REQUIRED if "--subcortical" is set.')
+    parser_p.add_argument('--subcortical_atlas', type=_resolve_path,
+                          help='Atlas in delineating subcortical structures. '
+                               'REQUIRED if "--subcortical" is set.')
+    parser_p.add_argument('--subcortical_labels', type=_resolve_path,
+                          help='A label file mapping the labels in "--subcortical_atlas" '
+                               'to structure names')
     return parser
 
 

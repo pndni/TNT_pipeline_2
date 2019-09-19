@@ -50,13 +50,39 @@ def preproc_workflow():
     return wf
 
 
+def subcortitcal_workflow(debug=False):
+    wf = pe.Workflow(name='subcortical')
+    inputspec = pe.Node(IdentityInterface(fields=['normalized',
+                                                  'subcortical_model',
+                                                  'subcortical_atlas']),
+                        'inputspec')
+    nlreg = pe.Node(ants_registration_syn_node(verbose=True), 'nlreg')
+    if debug:
+        nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
+    tratlas = pe.Node(resampling.ApplyTransforms(dimension=3, interpolation='MultiLabel'), 'tratlas')
+    outputspec = pe.Node(IdentityInterface(fields=['subcortical_transform',
+                                                   'subcortical_inverse_transform',
+                                                   'warped_subcortical_model',
+                                                   'native_subcortical_atlas']),
+                         'outputspec')
+
+    wf.connect([(inputspec, nlreg, [('normalized', 'fixed_image'),
+                                    ('subcortical_model', 'moving_image')]),
+                (inputspec, tratlas, [('subcortical_atlas', 'input_image')]),
+                (nlreg, tratlas, [('composite_transform', 'transforms')]),
+                (nlreg, outputspec, [('composite_transform', 'subcortical_transform'),
+                                     ('inverse_composite_transform', 'subcortical_inverse_transform'),
+                                     ('warped_image', 'warped_subcortical_model')]),
+                (tratlas, outputspec, [('output_image', 'native_subcortical_atlas')])])
+    return wf
+
+
 def ants_workflow(debug=False):
     wf = pe.Workflow(name='ants')
     inputspec = pe.Node(IdentityInterface(fields=['normalized', 'model', 'tags', 'brain_mask', 'model_brain_mask']), 'inputspec')
     converttags = pe.Node(utils.Minc2AntsPoints(flipxy=True), 'converttags')
-    nlreg = pe.Node(ants_registration_syn_node(),
+    nlreg = pe.Node(ants_registration_syn_node(verbose=True),
                     'nlreg')
-    nlreg.inputs.verbose = True
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
     trinvmerge = pe.Node(Merge(1), 'trinmerge')
@@ -125,36 +151,44 @@ def segment_lobes_workflow():
     return wf
 
 
-def main_workflow(statslabels, debug=False):
+def main_workflow(statslabels, subcortical=True, subcort_statslabels=None, debug=False):
     wf = pe.Workflow(name='main')
-    inputspec = pe.Node(IdentityInterface(fields=['T1',
-                                                  'bet_frac',
-                                                  'bet_vertical_gradient',
-                                                  'model',
-                                                  'tags',
-                                                  'atlas',
-                                                  'model_brain_mask']),
-                        'inputspec')
+    inputfields = ['T1',
+                   'bet_frac',
+                   'bet_vertical_gradient',
+                   'model',
+                   'tags',
+                   'atlas',
+                   'model_brain_mask']
+    outputfields = ['nu_bet',
+                    'normalized',
+                    'brain_mask',
+                    'transform',
+                    'inverse_transform',
+                    'warped_model',
+                    'classified',
+                    'features',
+                    'segmented',
+                    'transformed_atlas',
+                    'stats',
+                    'brainstats',
+                    'transformed_model_brain_mask']
+    if subcortical:
+        inputfields.extend(['subcortical_model',
+                            'subcortical_atlas'])
+        outputfields.extend(['subcortical_transform',
+                             'subcortical_inverse_transform',
+                             'warped_subcortical_model',
+                             'native_subcortical_atlas',
+                             'subcortical_stats'])
+    inputspec = pe.Node(IdentityInterface(fields=inputfields), 'inputspec')
+    outputspec = pe.Node(IdentityInterface(fields=outputfields), name='outputspec')
     pp = preproc_workflow()
     ants = ants_workflow(debug=debug)
     classify = classify_workflow()
     segment = segment_lobes_workflow()
     stats = image_stats_wf(['volume', 'mean'], statslabels, 'stats')
     brainstats = image_stats_wf(['volume', 'mean'], [OrderedDict(index=1, name='brain')], 'brainstats')
-    outputspec = pe.Node(IdentityInterface(fields=['nu_bet',
-                                                   'normalized',
-                                                   'brain_mask',
-                                                   'transform',
-                                                   'inverse_transform',
-                                                   'warped_model',
-                                                   'classified',
-                                                   'features',
-                                                   'segmented',
-                                                   'transformed_atlas',
-                                                   'stats',
-                                                   'brainstats',
-                                                   'transformed_model_brain_mask']),
-                         name='outputspec')
     wf.connect([
         (inputspec, pp, [('T1', 'inputspec.T1'),
                          ('bet_frac', 'inputspec.bet_frac'),
@@ -187,5 +221,19 @@ def main_workflow(statslabels, debug=False):
         (stats, outputspec, [('outputspec.out_file', 'stats')]),
         (brainstats, outputspec, [('outputspec.out_file', 'brainstats')]),
         ])
+    if subcortical:
+        if subcort_statslabels is None:
+            raise ValueError('subcort_statslabels must not be None if subcortical is True')
+        subcort = subcortitcal_workflow(debug=debug)
+        subcort_stats = image_stats_wf(['volume', 'mean'], subcort_statslabels, 'subcortical_stats')
+        wf.connect([(inputspec, subcort, [('subcortical_model', 'inputspec.subcortical_model'),
+                                          ('subcortical_atlas', 'inputspec.subcortical_atlas')]),
+                    (pp, subcort, [('outputspec.normalized', 'inputspec.normalized')]),
+                    (subcort, outputspec, [('outputspec.subcortical_transform', 'subcortical_transform'),
+                                           ('outputspec.subcortical_inverse_transform', 'subcortical_inverse_transform'),
+                                           ('outputspec.warped_subcortical_model', 'warped_subcortical_model'),
+                                           ('outputspec.native_subcortical_atlas', 'native_subcortical_atlas')]),
+                    (pp, subcort_stats, [('outputspec.nu_bet', 'inputspec.in_file')]),
+                    (subcort, subcort_stats, [('outputspec.native_subcortical_atlas', 'inputspec.index_mask_file')]),
+                    (subcort_stats, outputspec, [('outputspec.out_file', 'subcortical_stats')])])
     return wf
-
