@@ -17,7 +17,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'TNT_pipeline_2 = TNT_pipeline_2.pipeline:main',
+            'TNT_pipeline_2 = TNT_pipeline_2.cli:main',
         ],
     },
 )

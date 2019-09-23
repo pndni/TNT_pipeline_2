@@ -5,7 +5,7 @@ from pndniworkflows.utils import first_nonunique
 from pathlib import Path
 
 
-def get_outputinfo(model_space, subcortical, subcortical_model_space):
+def get_outputinfo(model_space, subcortical, subcortical_model_space, intracranial_volume):
     outputinfo = {}
     outputinfo['nu_bet'] = {'skullstripped': 'true',
                             'desc': 'nucor',
@@ -79,36 +79,45 @@ def get_outputinfo(model_space, subcortical, subcortical_model_space):
                                                   'desc': 'subcortex',
                                                   'extension': 'nii.gz'}
         outputinfo['subcortical_stats'] = {'suffix': 'stats', 'desc': 'subcortex', 'extension': 'tsv'}
+    if intracranial_volume:
+        outputinfo['native_icv_mask'] = {'suffix': 'mask', 'space': 'T1w', 'desc': 'ICV', 'extension': 'nii.gz'}
+        outputinfo['icv_stats'] = {'suffix': 'stats', 'desc': 'ICV', 'extension': 'tsv'}
     return outputinfo
 
 
 def io_out_workflow(bidslayout, entities, output_folder, model_space,
                     atlas_labels_str, tissue_labels_str, tissue_and_atlas_labels_str,
-                    subcortical=False, subcortical_model_space=None):
+                    subcortical=False, subcortical_model_space=None, subcortical_labels_str=None,
+                    intracranial_volume=False):
 
-    if subcortical and subcortical_model_space is None:
-        raise ValueError('If subcortical is True then subcortical_model_space cannot be None')
+    if subcortical and (subcortical_model_space is None or subcortical_labels_str is None):
+        raise ValueError('If subcortical is True then subcortical_model_space and subcortical_labels_str cannot be None')
     wf = pe.Workflow(name='io_out')
-    outputinfo = get_outputinfo(model_space, subcortical, subcortical_model_space)
+    outputinfo = get_outputinfo(model_space, subcortical, subcortical_model_space, intracranial_volume)
     inputspec = pe.Node(IdentityInterface(fields=list(outputinfo.keys())), 'inputspec')
     outputfilenames = {}
     for sourcename, bidsinfo in outputinfo.items():
-        tmppath = bidslayout.build_path({**bidsinfo, **entities}, strict=True)
+        tmppath = bidslayout.build_path({**bidsinfo, **entities}, strict=True, validate=False)
         if tmppath is None:
             raise RuntimeError('Unable to build path with {}'.format({**bidsinfo, **entities}))
         tmppath = Path(bidslayout.root, tmppath).resolve()
         tmppath.parent.mkdir(exist_ok=True, parents=True)
         outputfilenames[sourcename] = str(tmppath)
     outputlabels = {}
-    for sourcename, label_str in zip(['classified', 'transformed_atlas', 'segmented', 'features'],
-                                     [tissue_labels_str, atlas_labels_str, tissue_and_atlas_labels_str, tissue_labels_str]):
+    labeloutputs = [('classified', tissue_labels_str),
+                    ('transformed_atlas', atlas_labels_str),
+                    ('segmented', tissue_and_atlas_labels_str),
+                    ('features', tissue_labels_str)]
+    if subcortical:
+        labeloutputs.append(('native_subcortical_atlas', subcortical_labels_str))
+    for sourcename, label_str in labeloutputs:
         tmpparams = outputinfo[sourcename].copy()
         tmpparams['extension'] = 'tsv'
-        tmplabelpath = bidslayout.build_path({**tmpparams, **entities}, strict=True)
+        tmplabelpath = bidslayout.build_path({**tmpparams, **entities}, strict=True, validate=False)
         if tmplabelpath is None:
             raise RuntimeError('Unable to build path with {}'.format({**tmpparams, **entities}))
         outputlabels[sourcename] = (str(Path(bidslayout.root, tmplabelpath).resolve()),
-                                    tissue_labels_str)
+                                    label_str)
     duplicate = first_nonunique(list(outputfilenames.values()) + list(outputlabels.values()))
     if duplicate is not None:
         raise RuntimeError('Duplicate output files detected! {}'.format(duplicate))

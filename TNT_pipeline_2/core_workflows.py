@@ -80,16 +80,21 @@ def subcortitcal_workflow(debug=False):
 def ants_workflow(debug=False):
     wf = pe.Workflow(name='ants')
     inputspec = pe.Node(IdentityInterface(fields=['normalized', 'model', 'tags', 'brain_mask', 'model_brain_mask']), 'inputspec')
-    converttags = pe.Node(utils.Minc2AntsPoints(flipxy=True), 'converttags')
+    converttags = pe.Node(utils.ConvertPoints(in_format='tsv', out_format='ants'), 'converttags')
     nlreg = pe.Node(ants_registration_syn_node(verbose=True),
                     'nlreg')
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
     trinvmerge = pe.Node(Merge(1), 'trinmerge')
     trpoints = pe.Node(resampling.ApplyTransformsToPoints(dimension=3), 'trpoints')
-    converttags2 = pe.Node(utils.Ants2MincPoints(flipxy=True), 'converttags2')
+    converttags2 = pe.Node(utils.ConvertPoints(in_format='ants', out_format='minc'), 'converttags2')
     trbrain = pe.Node(resampling.ApplyTransforms(dimension=3, interpolation='NearestNeighbor'), 'trbrain')
-    outputspec = pe.Node(IdentityInterface(fields=['trtags', 'transform', 'inverse_transform', 'warped_model', 'transformed_model_brain_mask']), 'outputspec')
+    outputspec = pe.Node(IdentityInterface(fields=['trminctags',
+                                                   'transform',
+                                                   'inverse_transform',
+                                                   'warped_model',
+                                                   'transformed_model_brain_mask']),
+                         'outputspec')
     wf.connect([(inputspec, nlreg, [('normalized', 'fixed_image'),
                                     ('model', 'moving_image'),
                                     ('brain_mask', 'fixed_image_masks')]),
@@ -98,7 +103,7 @@ def ants_workflow(debug=False):
                 (inputspec, converttags, [('tags', 'in_file')]),
                 (converttags, trpoints, [('out_file', 'input_file')]),
                 (trpoints, converttags2, [('output_file', 'in_file')]),
-                (converttags2, outputspec, [('out_file', 'trtags')]),
+                (converttags2, outputspec, [('out_file', 'trminctags')]),
                 (inputspec, trbrain, [('model_brain_mask', 'input_image'),
                                       ('normalized', 'reference_image')]),
                 (nlreg, trbrain, [('composite_transform', 'transforms')]),
@@ -112,20 +117,20 @@ def ants_workflow(debug=False):
 
 def classify_workflow():
     wf = pe.Workflow(name='classify')
-    inputspec = pe.Node(IdentityInterface(fields=['nu_bet', 'trtags', 'brain_mask']), 'inputspec')
+    inputspec = pe.Node(IdentityInterface(fields=['nu_bet', 'trminctags', 'brain_mask']), 'inputspec')
     tomnc = tomnc_workflow()
     classify = pe.Node(minc.Classify(), 'classify')
     extract_features = pe.Node(minc.Classify(dump_features=True), 'extract_features')
     tonii = pe.Node(minc.Mnc2nii(write_byte=True, write_unsigned=True), 'mnc2nii')  # TODO can I always assume this?
     outputspec = pe.Node(IdentityInterface(fields=['classified', 'features']), 'outputspec')
     # TODO points outside mask?
-    wf.connect([(inputspec, classify, [('trtags', 'tag_file'),
+    wf.connect([(inputspec, classify, [('trminctags', 'tag_file'),
                                        ('brain_mask', 'mask_file')]),
                 (inputspec, tomnc, [('nu_bet', 'inputspec.in_file')]),
                 (tomnc, classify, [('outputspec.out_file', 'in_file')]),
                 (classify, tonii, [('out_file', 'in_file')]),
                 (tonii, outputspec, [('out_file', 'classified')]),
-                (inputspec, extract_features, [('trtags', 'tag_file')]),
+                (inputspec, extract_features, [('trminctags', 'tag_file')]),
                 (tomnc, extract_features, [('outputspec.out_file', 'in_file')]),
                 (extract_features, outputspec, [('features', 'features')]),
                 ])
@@ -151,7 +156,19 @@ def segment_lobes_workflow():
     return wf
 
 
-def main_workflow(statslabels, subcortical=True, subcort_statslabels=None, debug=False):
+def icv_workflow():
+    wf = pe.Workflow('icv')
+    inputspec = pe.Node(IdentityInterface(fields=['icv_mask', 'transform', 'normalized']), 'inputspec')
+    tricv = pe.Node(resampling.ApplyTransforms(dimension=3, interpolation='NearestNeighbor'), 'tricv')
+    outputspec = pe.Node(IdentityInterface(fields=['native_icv_mask']), 'outputspec')
+    wf.connect([(inputspec, tricv, [('icv_mask', 'input_image'),
+                                    ('transform', 'transforms'),
+                                    ('normalized', 'reference_image')]),
+                (tricv, outputspec, [('output_image', 'native_icv_mask')])])
+    return wf
+
+
+def main_workflow(statslabels, subcortical=False, subcort_statslabels=None, icv=False, debug=False):
     wf = pe.Workflow(name='main')
     inputfields = ['T1',
                    'bet_frac',
@@ -181,6 +198,9 @@ def main_workflow(statslabels, subcortical=True, subcort_statslabels=None, debug
                              'warped_subcortical_model',
                              'native_subcortical_atlas',
                              'subcortical_stats'])
+    if icv:
+        inputfields.extend(['icv_mask'])
+        outputfields.extend(['native_icv_mask', 'icv_stats'])
     inputspec = pe.Node(IdentityInterface(fields=inputfields), 'inputspec')
     outputspec = pe.Node(IdentityInterface(fields=outputfields), name='outputspec')
     pp = preproc_workflow()
@@ -199,7 +219,7 @@ def main_workflow(statslabels, subcortical=True, subcort_statslabels=None, debug
         (pp, ants, [('outputspec.normalized', 'inputspec.normalized'),
                     ('outputspec.brain_mask', 'inputspec.brain_mask')]),
         (pp, classify, [('outputspec.nu_bet', 'inputspec.nu_bet')]),
-        (ants, classify, [('outputspec.trtags', 'inputspec.trtags')]),
+        (ants, classify, [('outputspec.trminctags', 'inputspec.trminctags')]),
         (ants, segment, [('outputspec.transform', 'inputspec.transform')]),
         (classify, segment, [('outputspec.classified', 'inputspec.classified')]),
         (inputspec, segment, [('atlas', 'inputspec.atlas')]),
@@ -236,4 +256,11 @@ def main_workflow(statslabels, subcortical=True, subcort_statslabels=None, debug
                     (pp, subcort_stats, [('outputspec.nu_bet', 'inputspec.in_file')]),
                     (subcort, subcort_stats, [('outputspec.native_subcortical_atlas', 'inputspec.index_mask_file')]),
                     (subcort_stats, outputspec, [('outputspec.out_file', 'subcortical_stats')])])
+    if icv:
+        icv_wf = icv_workflow()
+        icv_stats = image_stats_wf(['volume'], [OrderedDict(index=1, name='ICV')], 'icv_stats')
+        wf.connect([(inputspec, icv_wf, [('icv_mask', 'inputspec.icv_mask')]),
+                    (pp, icv_wf, [('outputspec.normalized', 'inputspec.normalized')]),
+                    (ants, icv_wf, [('outputspec.transform', 'inputspec.transform')]),
+                    (icv_wf, outputspec, [('outputspec.native_icv_mask', 'native_icv_mask')])])
     return wf
