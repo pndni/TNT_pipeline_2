@@ -88,7 +88,7 @@ def get_outputinfo(model_space, subcortical, subcortical_model_space, intracrani
 def io_out_workflow(bidslayout, entities, output_folder, model_space,
                     atlas_labels_str, tissue_labels_str, tissue_and_atlas_labels_str,
                     subcortical=False, subcortical_model_space=None, subcortical_labels_str=None,
-                    intracranial_volume=False):
+                    intracranial_volume=False, debug=False):
 
     if subcortical and (subcortical_model_space is None or subcortical_labels_str is None):
         raise ValueError('If subcortical is True then subcortical_model_space and subcortical_labels_str cannot be None')
@@ -113,6 +113,8 @@ def io_out_workflow(bidslayout, entities, output_folder, model_space,
     for sourcename, label_str in labeloutputs:
         tmpparams = outputinfo[sourcename].copy()
         tmpparams['extension'] = 'tsv'
+        tmpparams['presuffix'] = tmpparams['suffix']
+        tmpparams['suffix'] = 'labels'
         tmplabelpath = bidslayout.build_path({**tmpparams, **entities}, strict=True, validate=False)
         if tmplabelpath is None:
             raise RuntimeError('Unable to build path with {}'.format({**tmpparams, **entities}))
@@ -122,7 +124,10 @@ def io_out_workflow(bidslayout, entities, output_folder, model_space,
     if duplicate is not None:
         raise RuntimeError('Duplicate output files detected! {}'.format(duplicate))
     for sourcename in outputinfo.keys():
-        node = pe.Node(Rename(format_string=outputfilenames[sourcename]), name='write' + sourcename)
+        if debug:
+            node = pe.Node(Rename(format_string=outputfilenames[sourcename]), name='write' + sourcename)
+        else:
+            node = pe.Node(io.RenameAndCheckExtension(format_string=outputfilenames[sourcename]), name='write' + sourcename)
         wf.connect(inputspec, sourcename, node, 'in_file')
         if sourcename in outputlabels:
             labelnode = pe.Node(io.WriteFile(out_file=outputlabels[sourcename][0],

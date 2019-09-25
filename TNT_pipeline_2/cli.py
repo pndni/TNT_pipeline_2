@@ -54,12 +54,12 @@ def get_parser():
     parser_p = parser.add_argument_group('Participant Arguments', description='Arguments for participant analysis level')
     parser_p.add_argument('--participant_labels', nargs='+', metavar='PARTICIPANT_LABEL',
                           help='Subjects on which to run the pipeline. If not specified, run on all.')
-    parser_p.add_argument('--model', type=_resolve_path, default='/template/SYS_808.nii',
+    parser_p.add_argument('--model', type=_resolve_path, default='/template/SYS_808.nii.gz',
                           help='A model/template brain in the same space as "--atlas" and "--tags". '
                                'Will be registered with T1w images to map template space to native space.')
     parser_p.add_argument('--model_space', type=str, default='SYS808',
                           help='The name of the model space. Used only for naming files.')
-    parser_p.add_argument('--atlas', type=_resolve_path, default='/template/SYS808_atlas_labels_nomiddle.nii',
+    parser_p.add_argument('--atlas', type=_resolve_path, default='/template/SYS808_atlas_labels_nomiddle.nii.gz',
                           help='Atlas in model/template space subdividing the brain into lobes. '
                                'This atlas will be transformed to native space and combined with the GM and WM maps.')
     parser_p.add_argument('--atlas_labels', type=_resolve_path,
@@ -72,7 +72,7 @@ def get_parser():
                           help='A TSV file with columns "x", "y", "z", and "index" (float, float, float, int, respectively). '
                           'these points are used to train the classifier.')
     parser_p.add_argument('--tag_labels', type=_resolve_path, help='A label file mapping "index" in "--tags" to tissue names.')
-    parser_p.add_argument('--model_brain_mask', type=_resolve_path, default='/template/SYS808_brainmask.nii',
+    parser_p.add_argument('--model_brain_mask', type=_resolve_path, default='/template/SYS808_brainmask.nii.gz',
                           help='Brain mask in model/template space.')
     parser_p.add_argument('--bet_frac', type=float, default=0.5,
                           help='Argument passed to FSL\'s BET')
@@ -99,12 +99,15 @@ def get_parser():
     parser_p.add_argument('--subcortical', action='store_true',
                           help='Run subcortical pipeline')
     parser_p.add_argument('--subcortical_model', type=_resolve_path,
+                          default='/template/colin27_t1_tal_lin.nii.gz',
                           help='A model/template in the same space as "--subcortical_atlas". '
                                'Will be registered with each subject. REQUIRED if "--subcortical" is set.')
     parser_p.add_argument('--subcortical_model_space', type=str,
+                          default='colin',
                           help='The name of the subcortical model space. Only used for naming files. '
                                'REQUIRED if "--subcortical" is set.')
     parser_p.add_argument('--subcortical_atlas', type=_resolve_path,
+                          default='/template/mask_oncolinnl_7_rs.nii.gz',
                           help='Atlas in delineating subcortical structures. '
                                'REQUIRED if "--subcortical" is set.')
     parser_p.add_argument('--subcortical_labels', type=_resolve_path,
@@ -113,7 +116,9 @@ def get_parser():
     parser_p.add_argument('--intracranial_volume', action='store_true',
                           help='Calculate intracranial volume')
     parser_p.add_argument('--intracranial_mask', type=_resolve_path,
-                          help='Intracranial mask in reference space')
+                          default='/template/SYS808_icv.nii.gz',
+                          help='Intracranial mask in reference space. '
+                               'REQUIRED if "--intracranial_volume" is set.')
     return parser
 
 

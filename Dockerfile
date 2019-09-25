@@ -78,7 +78,7 @@ RUN yum install -y python36 python36-pip python36-devel libstdc++-static && \
     nipype \
     git+https://github.com/bids-standard/pybids.git@0.9.4 \
     git+https://github.com/pndni/pndni_utils.git \
-    git+https://github.com/pndni/pndniworkflows.git
+    git+https://github.com/pndni/pndniworkflows.git@42d7629
 
 ENV ANTSPATH=/opt/ants/bin PATH=/opt/ants/bin:$PATH
 ENV FSLDIR=/opt/fsl \

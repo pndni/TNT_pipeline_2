@@ -11,8 +11,8 @@ from pndniworkflows.interfaces import pndni_utils
 from pndniworkflows.postprocessing import image_stats_wf
 
 
-def tomnc_workflow():
-    wf = pe.Workflow(name="to_mnc")
+def tomnc_workflow(wfname):
+    wf = pe.Workflow(name=wfname)
     inputspec = pe.Node(IdentityInterface(fields=['in_file']), 'inputspec')
     gunzip = pe.Node(utils.GunzipOrIdent(), 'gunzip')
     convert = pe.Node(minc.Nii2mnc(), 'convert')
@@ -23,30 +23,42 @@ def tomnc_workflow():
     return wf
 
 
+def toniigz_workflow(wfname, **kwargs):
+    wf = pe.Workflow(name=wfname)
+    inputspec = pe.Node(IdentityInterface(fields=['in_file']), 'inputspec')
+    convert = pe.Node(minc.Mnc2nii(**kwargs), 'convert')
+    gzip = pe.Node(utils.Gzip(), 'gzip')
+    outputspec = pe.Node(IdentityInterface(fields=['out_file']), 'outputspec')
+    wf.connect(inputspec, 'in_file', convert, 'in_file')
+    wf.connect(convert, 'out_file', gzip, 'in_file')
+    wf.connect(gzip, 'out_file', outputspec, 'out_file')
+    return wf
+
+
 def preproc_workflow():
     wf = pe.Workflow(name="preproc")
     inputspec = pe.Node(IdentityInterface(fields=['T1', 'bet_frac', 'bet_vertical_gradient']), 'inputspec')
-    tomnc_wf = tomnc_workflow()
+    tomnc_wf = tomnc_workflow('to_mnc')
     nu_correct = pe.Node(minc.NUCorrect(), 'nu_correct')
-    nuc_mnc_to_nii = pe.Node(minc.Mnc2nii(), 'nuc_mnc_to_nii')
+    nuc_mnc_to_nii = toniigz_workflow('nuc_mnc_to_nii')
     inorm = pe.Node(minc.INormalize(const2=[0.0, 5000.0], range=1.0), 'inorm')
-    inorm_mnc_to_nii = pe.Node(minc.Mnc2nii(), 'inorm_mnc_to_nii')
+    inorm_mnc_to_nii = toniigz_workflow('inorm_mnc_to_nii')
     bet = pe.Node(fsl.BET(mask=True), 'bet')
     mask = pe.Node(fsl.ImageMaths(), 'mask')
     outputspec = pe.Node(IdentityInterface(fields=['nu_bet', 'normalized', 'brain_mask']), 'outputspec')
     wf.connect(inputspec, 'T1', tomnc_wf, 'inputspec.in_file')
     wf.connect(tomnc_wf, 'outputspec.out_file', nu_correct, 'in_file')
     wf.connect(nu_correct, 'out_file', inorm, 'in_file')
-    wf.connect(inorm, 'out_file', inorm_mnc_to_nii, 'in_file')
-    wf.connect(inorm_mnc_to_nii, 'out_file', bet, 'in_file')
+    wf.connect(inorm, 'out_file', inorm_mnc_to_nii, 'inputspec.in_file')
+    wf.connect(inorm_mnc_to_nii, 'outputspec.out_file', bet, 'in_file')
     wf.connect(inputspec, 'bet_frac', bet, 'frac')
     wf.connect(inputspec, 'bet_vertical_gradient', bet, 'vertical_gradient')
-    wf.connect(nu_correct, 'out_file', nuc_mnc_to_nii, 'in_file')
-    wf.connect(nuc_mnc_to_nii, 'out_file', mask, 'in_file')
+    wf.connect(nu_correct, 'out_file', nuc_mnc_to_nii, 'inputspec.in_file')
+    wf.connect(nuc_mnc_to_nii, 'outputspec.out_file', mask, 'in_file')
     wf.connect(bet, 'mask_file', mask, 'mask_file')
     wf.connect(mask, 'out_file', outputspec, 'nu_bet')
     wf.connect(bet, 'mask_file', outputspec, 'brain_mask')
-    wf.connect(inorm_mnc_to_nii, 'out_file', outputspec, 'normalized')
+    wf.connect(inorm_mnc_to_nii, 'outputspec.out_file', outputspec, 'normalized')
     return wf
 
 
@@ -118,18 +130,18 @@ def ants_workflow(debug=False):
 def classify_workflow():
     wf = pe.Workflow(name='classify')
     inputspec = pe.Node(IdentityInterface(fields=['nu_bet', 'trminctags', 'brain_mask']), 'inputspec')
-    tomnc = tomnc_workflow()
+    tomnc = tomnc_workflow('to_mnc')
     classify = pe.Node(minc.Classify(), 'classify')
     extract_features = pe.Node(minc.Classify(dump_features=True), 'extract_features')
-    tonii = pe.Node(minc.Mnc2nii(write_byte=True, write_unsigned=True), 'mnc2nii')  # TODO can I always assume this?
+    tonii = toniigz_workflow('mnc2nii', write_byte=True, write_unsigned=True)  # TODO can I always assume this?
     outputspec = pe.Node(IdentityInterface(fields=['classified', 'features']), 'outputspec')
     # TODO points outside mask?
     wf.connect([(inputspec, classify, [('trminctags', 'tag_file'),
                                        ('brain_mask', 'mask_file')]),
                 (inputspec, tomnc, [('nu_bet', 'inputspec.in_file')]),
                 (tomnc, classify, [('outputspec.out_file', 'in_file')]),
-                (classify, tonii, [('out_file', 'in_file')]),
-                (tonii, outputspec, [('out_file', 'classified')]),
+                (classify, tonii, [('out_file', 'inputspec.in_file')]),
+                (tonii, outputspec, [('outputspec.out_file', 'classified')]),
                 (inputspec, extract_features, [('trminctags', 'tag_file')]),
                 (tomnc, extract_features, [('outputspec.out_file', 'in_file')]),
                 (extract_features, outputspec, [('features', 'features')]),
