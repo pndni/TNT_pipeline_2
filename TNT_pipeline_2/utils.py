@@ -5,7 +5,6 @@ from pndniworkflows import utils
 
 
 class Labels(object):
-
     def __init__(self, *, labels, string):
         self.labels = labels
         self.string = string
@@ -28,7 +27,8 @@ class Labels(object):
             return cls(labels=None, string=None)
         filename = getattr(args, label_arg)
         if filename is None:
-            filename = cls._get_label_file(getattr(args, base_arg), f'--{label_arg}')
+            filename = cls._get_label_file(getattr(args, base_arg),
+                                           f'--{label_arg}')
         labels = utils.read_labels(filename)
         return cls.from_labels(labels)
 
@@ -40,12 +40,14 @@ class Labels(object):
     @staticmethod
     def _get_label_file(basefile, argstr):
         suffixes = ''.join(basefile.suffixes)
-        labelfile = Path(basefile.parent, basefile.name[:-len(suffixes)] + '_labels.tsv')
+        labelfile = Path(basefile.parent,
+                         basefile.name[:-len(suffixes)] + '_labels.tsv')
         if not labelfile.exists():
-            raise FileNotFoundError(errno.ENOENT,
-                                    f'No label file for {basefile} specified and '
-                                    f'{labelfile} does not exist. Use {argstr} to '
-                                    'specify a label file.')
+            raise FileNotFoundError(
+                errno.ENOENT,
+                f'No label file for {basefile} specified and '
+                f'{labelfile} does not exist. Use {argstr} to '
+                'specify a label file.')
         return labelfile
 
     @staticmethod
@@ -60,5 +62,7 @@ def _update_workdir(wf, workdir):
     if workdir is None:
         return
     if not workdir.exists():
-        raise FileNotFoundError(errno.ENOENT, 'Specified working directory ({workdir}) does not exist')
+        raise FileNotFoundError(
+            errno.ENOENT,
+            'Specified working directory ({workdir}) does not exist')
     wf.base_dir = str(workdir)
