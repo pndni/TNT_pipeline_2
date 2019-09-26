@@ -1,6 +1,5 @@
 from nipype.pipeline import engine as pe
-from pndniworkflows.interfaces.io import CombineStats
-from nipype.interfaces.utility import Rename
+from pndniworkflows.interfaces.io import CombineStats, ExportFile
 from .utils import _update_workdir
 
 
@@ -18,7 +17,7 @@ def group_workflow(args):
                                    index='name',
                                    ignore={'index'}),
                       'combine')
-    write = pe.Node(Rename(format_string=str(outfile)), 'write')
+    write = pe.Node(ExportFile(out_file=outfile, check_extension=True), 'write')
     wf.connect(combine, 'out_tsv', write, 'in_file')
     _update_workdir(wf, args.working_directory)
     return wf

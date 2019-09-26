@@ -53,7 +53,7 @@ def get_outputinfo(model_space, subcortical, subcortical_model_space, intracrani
     outputinfo['features'] = {'suffix': 'features',
                               'space': 'T1w',
                               'desc': 'tissue',
-                              'extension': 'txt'}
+                              'extension': 'tsv'}
     outputinfo['stats'] = {'suffix': 'stats', 'desc': 'tissue+lobes', 'extension': 'tsv'}
     outputinfo['brainstats'] = {'suffix': 'stats', 'desc': 'brain', 'extension': 'tsv'}
     if subcortical:
@@ -127,7 +127,7 @@ def io_out_workflow(bidslayout, entities, output_folder, model_space,
         if debug:
             node = pe.Node(Rename(format_string=outputfilenames[sourcename]), name='write' + sourcename)
         else:
-            node = pe.Node(io.RenameAndCheckExtension(format_string=outputfilenames[sourcename]), name='write' + sourcename)
+            node = pe.Node(io.ExportFile(out_file=outputfilenames[sourcename], check_extension=True), name='write' + sourcename)
         wf.connect(inputspec, sourcename, node, 'in_file')
         if sourcename in outputlabels:
             labelnode = pe.Node(io.WriteFile(out_file=outputlabels[sourcename][0],

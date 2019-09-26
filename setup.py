@@ -20,4 +20,7 @@ setup(
             'TNT_pipeline_2 = TNT_pipeline_2.cli:main',
         ],
     },
+    package_data={
+        '': ['data/*']
+    }
 )

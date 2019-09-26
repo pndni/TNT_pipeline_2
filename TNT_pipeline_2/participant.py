@@ -10,32 +10,23 @@ from .utils import _update_workdir
 from nipype.interfaces import fsl
 
 
-def _get_scans(bidslayout, bids_filter, subject_list=None):
-    t1wfilter = {'suffix': 'T1w',
-                 'datatype': 'anat',
-                 'extension': ['nii', 'nii.gz']}
-    for key in bids_filter.keys():
-        assert key not in t1wfilter.keys()
-    if subject_list is None:
-        subject_list = bidslayout.get_subjects()
-    entities = []
-    filenames = []
-    for bidsfile in bidslayout.get(subject=subject_list, **t1wfilter, **bids_filter):
-        tmp = bidsfile.get_entities()
-        assert tmp.pop('datatype') == t1wfilter['datatype']
-        assert tmp.pop('suffix') == t1wfilter['suffix']
-        assert tmp.pop('extension') in t1wfilter['extension']
-        entities.append(tmp)
-        filenames.append(bidsfile.path)
-    if not utils.unique(entities):
-        raise RuntimeError('duplicate entities found')
-    if not utils.unique(filenames):
-        raise RuntimeError('duplicate filenames found')
-    return list(zip(filenames, entities))
+def participant_workflow(args):
+    fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
+    inbidslayout = BIDSLayout(args.input_dataset, validate=not args.skip_validation)
+    outbidslayout = utils.get_BIDSLayout_with_conf(args.output_folder, validate=False)
+
+    wf = pe.Workflow(name='participant')
+    for T1_scan, T1_entities in _get_scans(inbidslayout, args.bids_filter,
+                                           subject_list=args.participant_labels):
+        tmpwf = t1_workflow(T1_scan, T1_entities,
+                            outbidslayout,
+                            args)
+        wf.add_nodes([tmpwf])
+    _update_workdir(wf, args.working_directory)
+    return wf
 
 
-def t1_workflow(T1_scan, entities,
-                outbidslayout, args):
+def t1_workflow(T1_scan, entities, outbidslayout, args):
     wf = pe.Workflow(name='T1_' + '_'.join((f'{key}-{val}' for key, val in entities.items())))
     io_out_wf = output.io_out_workflow(outbidslayout,
                                        entities,
@@ -53,7 +44,7 @@ def t1_workflow(T1_scan, entities,
     if args.debug_io:
         renametr = pe.Node(Rename(format_string='%(base)s.h5', parse_string='(?P<base>.*).nii(.gz)?'), 'renametr')
         renameitr = pe.Node(Rename(format_string='%(base)s.h5', parse_string='(?P<base>.*).nii(.gz)?'), 'renameitr')
-        renamefeatures = pe.Node(Rename(format_string='%(base)s.txt', parse_string='(?P<base>.*).nii(.gz)?'), 'renamefeatures')
+        renamefeatures = pe.Node(Rename(format_string='%(base)s.tsv', parse_string='(?P<base>.*).nii(.gz)?'), 'renamefeatures')
         renametr.inputs.in_file = T1_scan
         renameitr.inputs.in_file = T1_scan
         renamefeatures.inputs.in_file = T1_scan
@@ -84,16 +75,19 @@ def t1_workflow(T1_scan, entities,
             io_out_wf.inputs.inputspec.native_icv_mask = T1_scan
             io_out_wf.inputs.inputspec.icv_stats = T1_scan
     else:
-        main_wf = main_workflow(args.tissue_and_atlas_labels.labels, debug=args.debug,
+        main_wf = main_workflow(args.tissue_and_atlas_labels.labels,
+                                args.bet_frac,
+                                args.bet_vertical_gradient,
+                                args.inormalize_const2,
+                                args.inormalize_range,
+                                debug=args.debug,
                                 subcortical=args.subcortical,
                                 subcort_statslabels=args.subcortical_labels.labels,
                                 icv=args.intracranial_volume)
-        main_wf.inputs.inputspec.bet_frac = args.bet_frac
         main_wf.inputs.inputspec.model = args.model
         main_wf.inputs.inputspec.tags = args.tags
         main_wf.inputs.inputspec.atlas = args.atlas
         main_wf.inputs.inputspec.model_brain_mask = args.model_brain_mask
-        main_wf.inputs.inputspec.bet_vertical_gradient = args.bet_vertical_gradient
         main_wf.inputs.inputspec.T1 = T1_scan
         if args.subcortical:
             main_wf.inputs.inputspec.subcortical_model = args.subcortical_model
@@ -120,17 +114,25 @@ def t1_workflow(T1_scan, entities,
     return wf
 
 
-def participant_workflow(args):
-    fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
-    inbidslayout = BIDSLayout(args.input_dataset, validate=not args.skip_validation)
-    outbidslayout = utils.get_BIDSLayout_with_conf(args.output_folder, validate=False)
-
-    wf = pe.Workflow(name='participant')
-    for T1_scan, T1_entities in _get_scans(inbidslayout, args.bids_filter,
-                                           subject_list=args.participant_labels):
-        tmpwf = t1_workflow(T1_scan, T1_entities,
-                            outbidslayout,
-                            args)
-        wf.add_nodes([tmpwf])
-    _update_workdir(wf, args.working_directory)
-    return wf
+def _get_scans(bidslayout, bids_filter, subject_list=None):
+    t1wfilter = {'suffix': 'T1w',
+                 'datatype': 'anat',
+                 'extension': ['nii', 'nii.gz']}
+    for key in bids_filter.keys():
+        assert key not in t1wfilter.keys()
+    if subject_list is None:
+        subject_list = bidslayout.get_subjects()
+    entities = []
+    filenames = []
+    for bidsfile in bidslayout.get(subject=subject_list, **t1wfilter, **bids_filter):
+        tmp = bidsfile.get_entities()
+        assert tmp.pop('datatype') == t1wfilter['datatype']
+        assert tmp.pop('suffix') == t1wfilter['suffix']
+        assert tmp.pop('extension') in t1wfilter['extension']
+        entities.append(tmp)
+        filenames.append(bidsfile.path)
+    if not utils.unique(entities):
+        raise RuntimeError('duplicate entities found')
+    if not utils.unique(filenames):
+        raise RuntimeError('duplicate filenames found')
+    return list(zip(filenames, entities))

@@ -78,7 +78,7 @@ RUN yum install -y python36 python36-pip python36-devel libstdc++-static && \
     nipype \
     git+https://github.com/bids-standard/pybids.git@0.9.4 \
     git+https://github.com/pndni/pndni_utils.git \
-    git+https://github.com/pndni/pndniworkflows.git@42d7629
+    git+https://github.com/pndni/pndniworkflows.git@bc60316de5929fa00592a0d13ccfa075e5e53c7a
 
 ENV ANTSPATH=/opt/ants/bin PATH=/opt/ants/bin:$PATH
 ENV FSLDIR=/opt/fsl \
@@ -101,9 +101,9 @@ ENV MINC_TOOLKIT=/opt/minc \
     MINC_COMPRESS="4" \
     VOLUME_CACHE_THRESHOLD="-1"
 
-COPY template /template
 COPY setup.py /opt/TNT_pipeline_2/
 COPY TNT_pipeline_2 /opt/TNT_pipeline_2/TNT_pipeline_2
 RUN pip3.6 install -e /opt/TNT_pipeline_2/
 ENV LC_ALL=en_US.utf-8
+ENV TNTPIPELINECONTAINER=1
 ENTRYPOINT ["TNT_pipeline_2"]
