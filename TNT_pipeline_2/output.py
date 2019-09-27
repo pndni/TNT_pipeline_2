@@ -45,14 +45,13 @@ def get_outputinfo(model_space,
     outputinfo['warped_model'] = {
         'space': 'T1w',
         'suffix': 'T1w',
-        'map_': model_space,
+        'desc': model_space,
         'extension': 'nii.gz'
     }
     outputinfo['transformed_model_brain_mask'] = {
         'space': 'T1w',
         'suffix': 'mask',
-        'map_': model_space,
-        'desc': 'brain',
+        'desc': f'{model_space}brain',
         'extension': 'nii.gz'
     }
     outputinfo['classified'] = {
@@ -70,7 +69,7 @@ def get_outputinfo(model_space,
     outputinfo['segmented'] = {
         'suffix': 'dseg',
         'space': 'T1w',
-        'desc': 'tissue+lobes',
+        'desc': 'tissuelobes',
         'extension': 'nii.gz'
     }
     outputinfo['features'] = {
@@ -80,7 +79,7 @@ def get_outputinfo(model_space,
         'extension': 'tsv'
     }
     outputinfo['stats'] = {
-        'suffix': 'stats', 'desc': 'tissue+lobes', 'extension': 'tsv'
+        'suffix': 'stats', 'desc': 'tissuelobes', 'extension': 'tsv'
     }
     outputinfo['brainstats'] = {
         'suffix': 'stats', 'desc': 'brain', 'extension': 'tsv'
@@ -105,8 +104,7 @@ def get_outputinfo(model_space,
         outputinfo['warped_subcortical_model'] = {
             'space': 'T1w',
             'suffix': 'T1w',
-            'map_': subcortical_model_space,
-            'desc': 'subcortex',
+            'desc': f'{subcortical_model_space}',
             'extension': 'nii.gz'
         }
         outputinfo['native_subcortical_atlas'] = {

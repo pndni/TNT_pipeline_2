@@ -1,12 +1,15 @@
 import argparse
 import errno
+from nipype import config
 from pathlib import Path
+from PipelineQC.main import qc_all
 from pkg_resources import resource_filename
 from pndniworkflows import utils
 
 from .group import group_workflow
 from .participant import participant_workflow
 from .utils import Labels
+from . import qc
 
 PIPELINE_NAME = 'Toronto Pipeline'
 
@@ -17,10 +20,13 @@ def get_parser():
 
 def main():
     args = parse_args()
+    config.update_config({'execution': {'crashfile_format': 'txt'}})
     if args.analysis_level == 'participant':
         run_participant(args)
     elif args.analysis_level == 'group':
         run_group(args)
+    elif args.analysis_level == 'qcpages':
+        run_qc(args)
     else:
         raise ValueError(
             'Invalid value for analysis_level. How did you get here?')
@@ -47,51 +53,75 @@ def run_participant(args):
     wf.run(plugin=args.nipype_plugin, plugin_args=args.plugin_args)
 
 
+def run_qc(args):
+    if args.qc_config_file is None:
+        conf = qc.make_config(args.model.name,
+                              args.model_space,
+                              args.subcortical,
+                              args.subcortical_model_space,
+                              args.intracranial_volume)
+    else:
+        conf = args.qc_config_file
+    qc_all([args.input_dataset, args.output_folder, args.model.parent],
+           args.output_folder / 'QC',
+           conf,
+           plugin=args.nipype_plugin,
+           working_directory=args.working_directory)
+
+
 def _get_parser(for_doc=False):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'input_dataset',
         type=_resolve_existing_path,
-        help=
-        'Location of `BIDS <https://bids-specification.readthedocs.io/en/stable/>`_ dataset'
-    )
+        help='Location of `BIDS '
+        '<https://bids-specification.readthedocs.io/en/stable/>`_ dataset')
     parser.add_argument('output_folder',
                         type=_resolve_existing_path,
                         help='Output directory')
-    parser.add_argument(
-        'analysis_level',
-        type=str,
-        choices=['participant', 'group'],
-        help=
-        '"participant" runs the main pipeline on each subject independently. "group" consolidates the results.'
-    )
+    parser.add_argument('analysis_level',
+                        type=str,
+                        choices=['participant', 'group', 'qcpages'],
+                        help='"participant" runs the main pipeline '
+                        'on each subject independently. '
+                        '"group" consolidates the results. '
+                        '"qcpages" uses PipelineQC to generate QC pages.')
     parser_b = parser.add_argument_group(
-        'General Arguments',
-        description='Arguments for both group and participant analysis levels')
+        'General Arguments', description='Arguments for all analysis levels')
     parser_b.add_argument('--working_directory',
                           type=_resolve_existing_path,
                           help='(Passed to the nipype workflow)')
     parser_b.add_argument('--skip_validation',
                           action='store_true',
                           help='Skip bids validation')
+    parser_b.add_argument('--nipype_plugin',
+                          type=str,
+                          choices=['Linear', 'MultiProc', 'Debug'],
+                          help='Specify the nipype workflow execution plugin. '
+                          '"Linear" will aid debugging.')
+    parser_b.add_argument(
+        '--n_proc',
+        type=int,
+        help='The number of processors to use with the '
+        'MultiProc plugin. If not set determine automatically.')
+    parser_pq = parser.add_argument_group(
+        description='Arguments for participant and qcpages analysis levels')
+    parser_pq.add_argument('--model',
+                           type=_resolve_existing_path,
+                           default=_model('SYS_808.nii.gz', for_doc=for_doc),
+                           help='A model/template brain in the same space as '
+                           '"--atlas" and "--tags". '
+                           'Will be registered with T1w images to '
+                           'map template space to native space.')
     # parser_g = parser.add_argument_group('group', description='Arguments for group analysis level')
     parser_p = parser.add_argument_group(
         'Participant Arguments',
         description='Arguments for participant analysis level')
-    parser_p.add_argument(
-        '--participant_labels',
-        nargs='+',
-        metavar='PARTICIPANT_LABEL',
-        help=
-        'Subjects on which to run the pipeline. If not specified, run on all.')
-    parser_p.add_argument(
-        '--model',
-        type=_resolve_existing_path,
-        default=_model('SYS_808.nii.gz', for_doc=for_doc),
-        help=
-        'A model/template brain in the same space as "--atlas" and "--tags". '
-        'Will be registered with T1w images to map template space to native space.'
-    )
+    parser_p.add_argument('--participant_labels',
+                          nargs='+',
+                          metavar='PARTICIPANT_LABEL',
+                          help='Subjects on which to run the pipeline. '
+                          'If not specified, run on all.')
     parser_p.add_argument(
         '--model_space',
         type=str,
@@ -107,18 +137,19 @@ def _get_parser(for_doc=False):
     parser_p.add_argument(
         '--atlas_labels',
         type=_resolve_existing_path,
-        help=
-        'A BIDS style label file (i.e. a tab-separated values file with "index" and "name" columns '
-        'described in `BEP011 <https://docs.google.com/document/d/1YG2g4UkEio4t_STIBOqYOwneLEs1emHIX'
+        help='A BIDS style label file (i.e. a tab-separated values '
+        'file with "index" and "name" columns described in `BEP011 '
+        '<https://docs.google.com/document/d/1YG2g4UkEio4t_STIBOqYOwneLEs1emHIX'
         'bGKynx7V0Y/edit#heading=h.g35a71g5bvrk>`_). '
-        'Describes the lobes in "atlas". If not specified will look for a file with the same '
+        'Describes the lobes in "atlas". If not specified '
+        'will look for a file with the same '
         'name ias "--atlas" but ending in "_labels.tsv".')
     parser_p.add_argument(
         '--tags',
         type=_resolve_existing_path,
         default=_model('ntags_1000_prob_90_nobg_sys808.tsv', for_doc=for_doc),
-        help=
-        'A TSV file with columns "x", "y", "z", and "index" (float, float, float, int, respectively). '
+        help='A TSV file with columns "x", "y", "z", and "index" '
+        '(float, float, float, int, respectively). '
         'these points are used to train the classifier.')
     parser_p.add_argument(
         '--tag_labels',
@@ -176,19 +207,6 @@ def _get_parser(for_doc=False):
                               nargs='?',
                               const=None,
                               default=argparse.SUPPRESS)
-    parser_p.add_argument(
-        '--nipype_plugin',
-        type=str,
-        choices=['Linear', 'MultiProc', 'Debug'],
-        help=
-        'Specify the nipype workflow execution plugin. "Linear" will aid debugging.'
-    )
-    parser_p.add_argument(
-        '--n_proc',
-        type=int,
-        help=
-        'The number of processors to use with the MultiProc plugin. If not set determine automatically.'
-    )
     parser_p.add_argument('--subcortical',
                           action='store_true',
                           help='Run subcortical pipeline')
@@ -199,13 +217,12 @@ def _get_parser(for_doc=False):
         help='A model/template in the same space as "--subcortical_atlas". '
         'Will be registered with each subject. REQUIRED if "--subcortical" is set.'
     )
-    parser_p.add_argument(
-        '--subcortical_model_space',
-        type=str,
-        default='colin',
-        help=
-        'The name of the subcortical model space. Only used for naming files. '
-        'REQUIRED if "--subcortical" is set.')
+    parser_p.add_argument('--subcortical_model_space',
+                          type=str,
+                          default='colin',
+                          help='The name of the subcortical model space. '
+                          'Only used for naming files. '
+                          'REQUIRED if "--subcortical" is set.')
     parser_p.add_argument('--subcortical_atlas',
                           type=_resolve_existing_path,
                           default=_model('mask_oncolinnl_7_rs.nii.gz',
@@ -225,6 +242,12 @@ def _get_parser(for_doc=False):
                           default=_model('SYS808_icv.nii.gz', for_doc=for_doc),
                           help='Intracranial mask in reference space. '
                           'REQUIRED if "--intracranial_volume" is set.')
+    parser_q = parser.add_argument_group(
+        'QC Pages Arguments',
+        description='Arguments for qcpages analysis level')
+    parser_q.add_argument('--qc_config_file',
+                          type=argparse.FileType('r'),
+                          help='Configuration file passed to PipelineQC.')
     return parser
 
 
