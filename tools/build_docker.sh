@@ -23,3 +23,5 @@ docker build --label org.opencontainers.image.revision=$ver --label org.opencont
 
 popd
 rm -rf $tmpdir
+
+docker push localhost:5000/tnt_pipeline_2:$ver
