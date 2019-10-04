@@ -110,7 +110,12 @@ ENV TNTPIPELINECONTAINER=1
 
 LABEL org.opencontainers.image.title=TNT_pipeline_2 \
       org.opencontainers.image.source=https://github.com/pndni/TNT_pipeline_2 \
-      org.opencontainers.image.url=https://github.com/pndni/TNT_pipeline_2
+      org.opencontainers.image.url=https://github.com/pndni/TNT_pipeline_2 \
+      org.label-schema.build-date="" \
+      org.label-schema.license="" \
+      org.label-schema.name="" \
+      org.label-schema.schema-version="" \
+      org.label-schema.vendor=""
 
 
 ENTRYPOINT ["TNT_pipeline_2"]

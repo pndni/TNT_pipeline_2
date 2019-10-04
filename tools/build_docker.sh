@@ -19,7 +19,7 @@ then
     lv="--label org.opencontainers.image.version=$ver"
 fi
 
-docker build -t localhost:5000/tnt_pipeline_2:$ver . --label org.opencontainers.image.revision=$ver --label org.opencontainers.image.created=$(date --rfc-3339=seconds) $lv
+docker build --label org.opencontainers.image.revision=$ver --label org.opencontainers.image.created="$(date --rfc-3339=seconds)" $lv -t localhost:5000/tnt_pipeline_2:$ver .
 
 popd
 rm -rf $tmpdir
