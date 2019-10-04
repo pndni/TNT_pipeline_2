@@ -108,8 +108,9 @@ RUN pip3.6 install -e /opt/TNT_pipeline_2/
 ENV LC_ALL=en_US.utf-8
 ENV TNTPIPELINECONTAINER=1
 
-LABEL org.label-schema.name=TNT_pipeline_2 \
-      org.label-schema.vcs-ref=https://github.com/pndni/TNT_pipeline_2 \
-      org.label-schema.schema-version=1.0
+LABEL org.opencontainers.image.title=TNT_pipeline_2 \
+      org.opencontainers.image.source=https://github.com/pndni/TNT_pipeline_2 \
+      org.opencontainers.image.url=https://github.com/pndni/TNT_pipeline_2
+
 
 ENTRYPOINT ["TNT_pipeline_2"]
