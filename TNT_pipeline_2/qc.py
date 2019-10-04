@@ -167,7 +167,7 @@ def make_config(model_name,
             "name": "Rating",
             "radio": {
                 "name":
-                "Overal",
+                "Overall",
                 "options": [
                     {
                         "name": "Reject", "value": 1
