@@ -97,6 +97,7 @@ def _get_parser(for_doc=False):
     parser_b.add_argument('--nipype_plugin',
                           type=str,
                           choices=['Linear', 'MultiProc', 'Debug'],
+                          default='MultiProc',
                           help='Specify the nipype workflow execution plugin. '
                           '"Linear" will aid debugging.')
     parser_b.add_argument(
