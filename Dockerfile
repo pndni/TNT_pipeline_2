@@ -106,16 +106,27 @@ COPY setup.py /opt/TNT_pipeline_2/
 COPY TNT_pipeline_2 /opt/TNT_pipeline_2/TNT_pipeline_2
 RUN pip3.6 install -e /opt/TNT_pipeline_2/
 ENV LC_ALL=en_US.utf-8
-ENV TNTPIPELINECONTAINER=1
+# https://vsupalov.com/docker-build-pass-environment-variables/
+ARG ver=dev
+ARG builddate=""
+ARG revision=""
 
 LABEL org.opencontainers.image.title=TNT_pipeline_2 \
       org.opencontainers.image.source=https://github.com/pndni/TNT_pipeline_2 \
       org.opencontainers.image.url=https://github.com/pndni/TNT_pipeline_2 \
+      org.opencontainers.image.revision=$ver \
+      org.opencontainers.image.created=$builddate \
+      org.opencontainers.image.version=$revision \
       org.label-schema.build-date="" \
       org.label-schema.license="" \
       org.label-schema.name="" \
       org.label-schema.schema-version="" \
       org.label-schema.vendor=""
+
+ENV TNTPIPELINECONTAINER=1 \
+    TNTPIPELINEVER=$ver \
+    TNTPIPELINEREV=$revision \
+    TNTPIPELINEBUILDDATE=$builddate
 
 
 ENTRYPOINT ["TNT_pipeline_2"]

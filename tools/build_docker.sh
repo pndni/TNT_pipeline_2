@@ -16,10 +16,14 @@ git checkout $ver
 lv=""
 if [ $labelversion == 1 ]
 then
-    lv="--label org.opencontainers.image.version=$ver"
+    lv="--build-arg ver=$ver"
 fi
 
-docker build --label org.opencontainers.image.revision=$ver --label org.opencontainers.image.created="$(date --rfc-3339=seconds)" $lv -t localhost:5000/tnt_pipeline_2:$ver .
+docker build \
+       --build-arg revision=$ver \
+       --build-arg builddate="$(date --rfc-3339=seconds)" \
+       $lv \
+       -t localhost:5000/tnt_pipeline_2:$ver .
 
 popd
 rm -rf $tmpdir
