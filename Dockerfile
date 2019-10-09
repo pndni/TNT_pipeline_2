@@ -75,6 +75,7 @@ RUN wget --output-document=/root/fslinstaller.py https://fsl.fmrib.ox.ac.uk/fsld
 # python
 RUN yum install -y python36 python36-pip python36-devel libstdc++-static
 COPY docker_reqs.txt docker_reqs.txt
+RUN pip3.6 install --upgrade pip==19.2.3
 RUN pip3.6 install --requirement docker_reqs.txt
 
 ENV ANTSPATH=/opt/ants/bin PATH=/opt/ants/bin:$PATH
