@@ -23,9 +23,9 @@ docker build \
        --build-arg revision=$ver \
        --build-arg builddate="$(date --rfc-3339=seconds)" \
        $lv \
-       -t localhost:5000/tnt_pipeline_2:$ver .
+       -t pndni/tnt_pipeline_2:$ver .
 
 popd
 rm -rf $tmpdir
 
-docker push localhost:5000/tnt_pipeline_2:$ver
+docker push pndni/tnt_pipeline_2:$ver
