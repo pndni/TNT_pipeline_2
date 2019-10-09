@@ -10,7 +10,7 @@ setup(
         'pybids>=0.9.4',
         'pndniworkflows @ git+https://github.com/pndni/pndniworkflows.git@8f66cdbd3fdcb987f939d49dc22e0344b7d53365',
         'pndni_utils @ git+https://github.com/pndni/pndni_utils.git@efcbb1f9fb0a5d1beea757c2edb3a3c043c2cec6',
-        'PipelineQC @ https://github.com/pndni/PipelineQC/archive/0.5.1.zip',
+        'PipelineQC @ https://github.com/pndni/PipelineQC/archive/0.5.2.zip',
     ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
