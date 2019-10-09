@@ -74,12 +74,8 @@ RUN wget --output-document=/root/fslinstaller.py https://fsl.fmrib.ox.ac.uk/fsld
 
 # python
 RUN yum install -y python36 python36-pip python36-devel libstdc++-static
-RUN pip3.6 --no-cache-dir install numpy==1.16.3 bids-validator==1.2.4 nibabel==2.4.0 duecredit==0.7.0 \
-    git+https://github.com/stilley2/nipype@23be8dd0fa76f4ae5fa5d5101b8d2c7f8e32aefd \
-    git+https://github.com/bids-standard/pybids.git@0.9.4 \
-    git+https://github.com/pndni/pndni_utils.git@efcbb1f9fb0a5d1beea757c2edb3a3c043c2cec6 \
-    git+https://github.com/pndni/pndniworkflows.git@e2cd6965019e11c5670cee25573407a94c232a69 \
-    git+https://github.com/pndni/PipelineQC.git@4e7c337ffce64cd45bf2471113c013b0db98bc0c
+COPY docker_reqs.txt docker_reqs.txt
+RUN pip3.6 install --requirement docker_reqs.txt
 
 ENV ANTSPATH=/opt/ants/bin PATH=/opt/ants/bin:$PATH
 ENV FSLDIR=/opt/fsl \
