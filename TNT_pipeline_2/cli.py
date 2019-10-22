@@ -151,7 +151,9 @@ def _get_parser(for_doc=False):
         default=_model('ntags_1000_prob_90_nobg_sys808.tsv', for_doc=for_doc),
         help='A TSV file with columns "x", "y", "z", and "index" '
         '(float, float, float, int, respectively). '
-        'these points are used to train the classifier.')
+        'these points are used to train the classifier. '
+        'Note that if both the qform and sform of model are specified, '
+        'the qform will be used, so the tags must be in those coordinates.')
     parser_p.add_argument(
         '--tag_labels',
         type=_resolve_existing_path,

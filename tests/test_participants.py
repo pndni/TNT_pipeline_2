@@ -209,7 +209,7 @@ def test_io(input_dir,
                 assert ftmp.read_text() == cmpstr
             else:
                 with open(ftmp, 'r', newline='') as flabel:
-                    if 'tissue+lobes' in ftmp.name:
+                    if 'tissuelobes' in ftmp.name:
                         assert flabel.read(
                         ) == 'index\tname\r\n1\ttissue+lobes\r\n'
                     elif 'tissue' in ftmp.name:

@@ -104,7 +104,7 @@ def get_outputinfo(model_space,
         outputinfo['warped_subcortical_model'] = {
             'space': 'T1w',
             'suffix': 'T1w',
-            'desc': f'{subcortical_model_space}',
+            'desc': f'subcortex{subcortical_model_space}',
             'extension': 'nii.gz'
         }
         outputinfo['native_subcortical_atlas'] = {

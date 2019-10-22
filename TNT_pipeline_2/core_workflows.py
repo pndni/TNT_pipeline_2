@@ -11,6 +11,17 @@ from pndniworkflows.interfaces import pndni_utils
 from pndniworkflows.postprocessing import image_stats_wf
 
 
+def forceqform_workflow(files):
+    wf = pe.Workflow(name='forceqform')
+    inputspec = pe.Node(IdentityInterface(fields=files), 'inputspec')
+    outputspec = pe.Node(IdentityInterface(fields=files), 'outputspec')
+    for f in files:
+        node = pe.Node(pndni_utils.ForceQForm(), f'forceqc_{f}')
+        wf.connect(inputspec, f, node, 'in_file')
+        wf.connect(node, 'out_file', outputspec, f)
+    return wf
+
+
 def tomnc_workflow(wfname):
     wf = pe.Workflow(name=wfname)
     inputspec = pe.Node(IdentityInterface(fields=['in_file']), 'inputspec')
@@ -289,6 +300,9 @@ def main_workflow(statslabels,
     inputspec = pe.Node(IdentityInterface(fields=inputfields), 'inputspec')
     outputspec = pe.Node(IdentityInterface(fields=outputfields),
                          name='outputspec')
+    qformfiles = inputfields.copy()
+    qformfiles.pop(qformfiles.index('tags'))
+    forceqform = forceqform_workflow(qformfiles)
     pp = preproc_workflow(bet_frac,
                           bet_vertical_gradient,
                           inormalize_const2,
@@ -300,19 +314,22 @@ def main_workflow(statslabels,
     brainstats = image_stats_wf(['volume', 'mean'],
                                 [OrderedDict(index=1, name='brain')],
                                 'brainstats')
+    for qformf in qformfiles:
+        wf.connect(inputspec, qformf, forceqform, f'inputspec.{qformf}')
     wf.connect([
-        (inputspec, pp, [('T1', 'inputspec.T1')]),
-        (inputspec,
+        (forceqform, pp, [('outputspec.T1', 'inputspec.T1')]),
+        (forceqform,
          ants,
-         [('model', 'inputspec.model'), ('tags', 'inputspec.tags'),
-          ('model_brain_mask', 'inputspec.model_brain_mask')]),
+         [('outputspec.model', 'inputspec.model'),
+          ('outputspec.model_brain_mask', 'inputspec.model_brain_mask')]),
+        (inputspec, ants, [('tags', 'inputspec.tags')]),
         (pp, ants, [('outputspec.normalized', 'inputspec.normalized')]),
         (pp, classify, [('outputspec.nu_bet', 'inputspec.nu_bet')]),
         (ants, classify, [('outputspec.trminctags', 'inputspec.trminctags')]),
         (ants, segment, [('outputspec.transform', 'inputspec.transform')]),
         (classify,
          segment, [('outputspec.classified', 'inputspec.classified')]),
-        (inputspec, segment, [('atlas', 'inputspec.atlas')]),
+        (forceqform, segment, [('outputspec.atlas', 'inputspec.atlas')]),
         (segment,
          stats, [('outputspec.segmented', 'inputspec.index_mask_file')]),
         (pp, stats, [('outputspec.nu_bet', 'inputspec.in_file')]),
@@ -353,10 +370,10 @@ def main_workflow(statslabels,
                                        subcort_statslabels,
                                        'subcortical_stats')
         wf.connect([
-            (inputspec,
+            (forceqform,
              subcort,
-             [('subcortical_model', 'inputspec.subcortical_model'),
-              ('subcortical_atlas', 'inputspec.subcortical_atlas')]),
+             [('outputspec.subcortical_model', 'inputspec.subcortical_model'),
+              ('outputspec.subcortical_atlas', 'inputspec.subcortical_atlas')]),
             (pp, subcort, [('outputspec.normalized', 'inputspec.normalized')]),
             (subcort,
              outputspec,
@@ -381,7 +398,7 @@ def main_workflow(statslabels,
                                    [OrderedDict(index=1, name='ICV')],
                                    'icv_stats')
         wf.connect([
-            (inputspec, icv_wf, [('icv_mask', 'inputspec.icv_mask')]),
+            (forceqform, icv_wf, [('outputspec.icv_mask', 'inputspec.icv_mask')]),
             (pp, icv_wf, [('outputspec.nu_bet', 'inputspec.nu_bet')]),
             (ants, icv_wf, [('outputspec.transform', 'inputspec.transform')]),
             (icv_wf,
