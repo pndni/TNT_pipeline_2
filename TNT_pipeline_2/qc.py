@@ -1,8 +1,7 @@
 from . import output
 
 
-def make_config(model_name,
-                model_space,
+def make_config(model_space,
                 subcortical,
                 subcortical_model_space,
                 intracranial_volume):
@@ -45,26 +44,8 @@ def make_config(model_name,
                     ]
                 }
             ],
-            "models":
-            "(?P<modelname>.*)"
         },
         "files": {
-            "model": {
-                "pattern": "models",
-                "global": True,
-                "filter": {
-                    "modelname": model_name
-                }
-            },
-            "T1w": {
-                "pattern": "bids",
-                "filter": {
-                    "suffix": "T1w",
-                    "desc": None,
-                    "skullstripped": None,
-                    "map": None
-                }
-            },
             "features_label": {
                 "pattern": "bids",
                 "filter": {
@@ -85,28 +66,28 @@ def make_config(model_name,
             {
                 "type": "compare",
                 "name1": "T1 weighted input",
-                "image1": "T1w",
+                "image1": "T1",
                 "name2": "non-uniformity corrected and normalized",
                 "image2": "normalized",
             },
             {
                 "type": "compare",
                 "name1": "T1 weighted input",
-                "image1": "T1w",
+                "image1": "T1",
                 "name2": "Non-uniformity corrected brain",
                 "image2": "nu_bet"
             },
             {
                 "type": "compare",
                 "name1": "T1 weighted input",
-                "image1": "T1w",
+                "image1": "T1",
                 "name2": "Warped model",
                 "image2": "warped_model"
             },
             {
                 "type": "contour",
-                "name": "T1w with transformed model brain mask",
-                "image": "T1w",
+                "name": "T1 with transformed model brain mask",
+                "image": "T1",
                 "labelimage": "transformed_model_brain_mask"
             },
             {
@@ -118,13 +99,13 @@ def make_config(model_name,
             {
                 "type": "contour",
                 "name": "Tissue segmentation",
-                "image": "T1w",
+                "image": "T1",
                 "labelimage": "classified"
             },
             {
                 "type": "contour",
                 "name": "Lobes",
-                "image": "T1w",
+                "image": "T1",
                 "labelimage": "transformed_atlas"
             },
         ]
@@ -138,14 +119,14 @@ def make_config(model_name,
             {
                 "type": "compare",
                 "name1": "T1 weighted input",
-                "image1": "T1w",
+                "image1": "T1",
                 "name2": "Transformed subcortical model",
                 "image2": "warped_subcortical_model"
             },
             {
                 "type": "contour",
                 "name": "Sub cortical",
-                "image": "T1w",
+                "image": "T1",
                 "labelimage": "native_subcortical_atlas"
             },
         ])
@@ -154,7 +135,7 @@ def make_config(model_name,
         conf['reportlets'].append({
             "type": "contour",
             "name": "ICV mask",
-            "image": "T1w",
+            "image": "T1",
             "labelimage": "native_icv_mask"
         })
         fields.append("Poor ICV mask registraton")

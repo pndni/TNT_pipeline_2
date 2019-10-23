@@ -55,14 +55,13 @@ def run_participant(args):
 
 def run_qc(args):
     if args.qc_config_file is None:
-        conf = qc.make_config(args.model.name,
-                              args.model_space,
+        conf = qc.make_config(args.model_space,
                               args.subcortical,
                               args.subcortical_model_space,
                               args.intracranial_volume)
     else:
         conf = args.qc_config_file
-    qc_all([args.input_dataset, args.output_folder, args.model.parent],
+    qc_all([args.output_folder],
            args.output_folder / 'QC',
            conf,
            plugin=args.nipype_plugin,
@@ -105,15 +104,26 @@ def _get_parser(for_doc=False):
         type=int,
         help='The number of processors to use with the '
         'MultiProc plugin. If not set determine automatically.')
-    parser_pq = parser.add_argument_group(
-        description='Arguments for participant and qcpages analysis levels')
-    parser_pq.add_argument('--model',
-                           type=_resolve_existing_path,
-                           default=_model('SYS_808.nii.gz', for_doc=for_doc),
-                           help='A model/template brain in the same space as '
-                           '"--atlas" and "--tags". '
-                           'Will be registered with T1w images to '
-                           'map template space to native space.')
+    parser_qcp = parser.add_argument_group(
+        'Participant and QC pages arguments',
+        description='Arguments for "participant" and "qcpages"')
+    parser_qcp.add_argument(
+        '--model_space',
+        type=str,
+        default='SYS808',
+        help='The name of the model space. Used only for naming files.')
+    parser_qcp.add_argument('--subcortical',
+                            action='store_true',
+                            help='Run subcortical pipeline')
+    parser_qcp.add_argument('--subcortical_model_space',
+                            type=str,
+                            default='colin',
+                            help='The name of the subcortical model space. '
+                            'Only used for naming files. '
+                            'REQUIRED if "--subcortical" is set.')
+    parser_qcp.add_argument('--intracranial_volume',
+                            action='store_true',
+                            help='Calculate intracranial volume')
     # parser_g = parser.add_argument_group('group', description='Arguments for group analysis level')
     parser_p = parser.add_argument_group(
         'Participant Arguments',
@@ -123,11 +133,6 @@ def _get_parser(for_doc=False):
                           metavar='PARTICIPANT_LABEL',
                           help='Subjects on which to run the pipeline. '
                           'If not specified, run on all.')
-    parser_p.add_argument(
-        '--model_space',
-        type=str,
-        default='SYS808',
-        help='The name of the model space. Used only for naming files.')
     parser_p.add_argument(
         '--atlas',
         type=_resolve_existing_path,
@@ -210,9 +215,6 @@ def _get_parser(for_doc=False):
                               nargs='?',
                               const=None,
                               default=argparse.SUPPRESS)
-    parser_p.add_argument('--subcortical',
-                          action='store_true',
-                          help='Run subcortical pipeline')
     parser_p.add_argument(
         '--subcortical_model',
         type=_resolve_existing_path,
@@ -220,12 +222,6 @@ def _get_parser(for_doc=False):
         help='A model/template in the same space as "--subcortical_atlas". '
         'Will be registered with each subject. REQUIRED if "--subcortical" is set.'
     )
-    parser_p.add_argument('--subcortical_model_space',
-                          type=str,
-                          default='colin',
-                          help='The name of the subcortical model space. '
-                          'Only used for naming files. '
-                          'REQUIRED if "--subcortical" is set.')
     parser_p.add_argument('--subcortical_atlas',
                           type=_resolve_existing_path,
                           default=_model('mask_oncolinnl_7_rs.nii.gz',
@@ -237,9 +233,6 @@ def _get_parser(for_doc=False):
         type=_resolve_existing_path,
         help='A label file mapping the labels in "--subcortical_atlas" '
         'to structure names')
-    parser_p.add_argument('--intracranial_volume',
-                          action='store_true',
-                          help='Calculate intracranial volume')
     parser_p.add_argument('--intracranial_mask',
                           type=_resolve_existing_path,
                           default=_model('SYS808_icv.nii.gz', for_doc=for_doc),

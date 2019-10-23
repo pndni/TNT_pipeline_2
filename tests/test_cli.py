@@ -14,3 +14,6 @@ def test_cli(tmp_path):
     cmd = ['TNT_pipeline_2', str(indir), str(outdir), 'participant',
            '--subcortical', '--intracranial_volume', '--skip_validation', '--debug']
     subprocess.check_call(cmd)
+    cmd = ['TNT_pipeline_2', str(indir), str(outdir), 'qcpages',
+           '--subcortical', '--intracranial_volume']
+    subprocess.check_call(cmd)
