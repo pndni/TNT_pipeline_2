@@ -1,7 +1,8 @@
 import pytest
 import re
-from TNT_pipeline_2 import cli
+from TNT_pipeline_2 import cli, qc
 from nipype.pipeline.plugins.tools import report_crash
+from PipelineQC.get_files import get_files
 
 NUMANAT = 19
 NUMXFM = 2
@@ -221,6 +222,8 @@ def test_io(input_dir,
                         ) == 'index\tname\r\n1\tsubcortex\r\n'
                     else:
                         raise RuntimeError()
+    conf = qc.make_config('test', subcort, 'test2', icv)
+    get_files([tmp_path], conf)
 
 
 @pytest.mark.parametrize('icv', [False, True])

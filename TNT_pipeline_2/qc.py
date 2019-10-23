@@ -111,7 +111,14 @@ def make_config(model_space,
         ]
     }
     for k, v in outfiles.items():
-        conf['files'][k] = {'pattern': 'bids', 'filter': v}
+        if k == 'T1':
+            vtmp = v.copy()
+            vtmp['skullstripped'] = None
+            vtmp['desc'] = None
+            vtmp['space'] = None
+            conf['files'][k] = {'pattern': 'bids', 'filter': vtmp}
+        else:
+            conf['files'][k] = {'pattern': 'bids', 'filter': v}
 
     fields = ["Poor BET", "Poor regisitration", "Poor classification"]
     if subcortical:

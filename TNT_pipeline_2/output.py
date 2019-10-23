@@ -50,7 +50,7 @@ def get_outputinfo(model_space,
         'extension': 'nii.gz'
     }
     outputinfo['transform'] = {
-        'from_': model_space,
+        'from': model_space,
         'to': 'T1w',
         'suffix': 'xfm',
         'mode': 'image',
@@ -58,7 +58,7 @@ def get_outputinfo(model_space,
     }
     outputinfo['inverse_transform'] = {
         'to': model_space,
-        'from_': 'T1w',
+        'from': 'T1w',
         'suffix': 'xfm',
         'mode': 'image',
         'extension': 'h5'
@@ -108,14 +108,14 @@ def get_outputinfo(model_space,
     if subcortical:
         outputinfo['subcortical_transform'] = {
             'to': 'T1w',
-            'from_': subcortical_model_space,
+            'from': subcortical_model_space,
             'suffix': 'xfm',
             'desc': 'subcortex',
             'mode': 'image',
             'extension': 'h5'
         }
         outputinfo['subcortical_inverse_transform'] = {
-            'from_': 'T1w',
+            'from': 'T1w',
             'to': subcortical_model_space,
             'suffix': 'xfm',
             'desc': 'subcortex',
