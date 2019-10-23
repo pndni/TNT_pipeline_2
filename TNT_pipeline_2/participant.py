@@ -61,6 +61,10 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
         renametr.inputs.in_file = T1_scan
         renameitr.inputs.in_file = T1_scan
         renamefeatures.inputs.in_file = T1_scan
+        io_out_wf.inputs.inputspec.T1 = T1_scan
+        io_out_wf.inputs.inputspec.model = T1_scan
+        io_out_wf.inputs.inputspec.atlas = T1_scan
+        io_out_wf.inputs.inputspec.model_brain_mask = T1_scan
         io_out_wf.inputs.inputspec.nu_bet = T1_scan
         io_out_wf.inputs.inputspec.normalized = T1_scan
         io_out_wf.inputs.inputspec.brain_mask = T1_scan
@@ -88,6 +92,8 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
                 'renamesubitr')
             renamesubtr.inputs.in_file = T1_scan
             renamesubitr.inputs.in_file = T1_scan
+            io_out_wf.inputs.inputspec.subcortical_model = T1_scan
+            io_out_wf.inputs.inputspec.subcortical_atlas = T1_scan
             io_out_wf.inputs.inputspec.warped_subcortical_model = T1_scan
             io_out_wf.inputs.inputspec.native_subcortical_atlas = T1_scan
             io_out_wf.inputs.inputspec.subcortical_stats = T1_scan
@@ -99,6 +105,7 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
                               'inputspec.subcortical_inverse_transform')])
             ])
         if args.intracranial_volume:
+            io_out_wf.inputs.inputspec.icv_mask = T1_scan
             io_out_wf.inputs.inputspec.native_icv_mask = T1_scan
             io_out_wf.inputs.inputspec.icv_stats = T1_scan
     else:

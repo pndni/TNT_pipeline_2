@@ -16,7 +16,7 @@ def forceqform_workflow(files):
     inputspec = pe.Node(IdentityInterface(fields=files), 'inputspec')
     outputspec = pe.Node(IdentityInterface(fields=files), 'outputspec')
     for f in files:
-        node = pe.Node(pndni_utils.ForceQForm(), f'forceqc_{f}')
+        node = pe.Node(pndni_utils.ForceQForm(out_file=f'{f}_qform.nii.gz'), f'forceqc_{f}')
         wf.connect(inputspec, f, node, 'in_file')
         wf.connect(node, 'out_file', outputspec, f)
     return wf
@@ -271,6 +271,10 @@ def main_workflow(statslabels,
     wf = pe.Workflow(name='main')
     inputfields = ['T1', 'model', 'tags', 'atlas', 'model_brain_mask']
     outputfields = [
+        'T1',
+        'model',
+        'atlas',
+        'model_brain_mask',
         'nu_bet',
         'normalized',
         'brain_mask',
@@ -288,6 +292,8 @@ def main_workflow(statslabels,
     if subcortical:
         inputfields.extend(['subcortical_model', 'subcortical_atlas'])
         outputfields.extend([
+            'subcortical_model',
+            'subcortical_atlas',
             'subcortical_transform',
             'subcortical_inverse_transform',
             'warped_subcortical_model',
@@ -296,7 +302,7 @@ def main_workflow(statslabels,
         ])
     if icv:
         inputfields.extend(['icv_mask'])
-        outputfields.extend(['native_icv_mask', 'icv_stats'])
+        outputfields.extend(['icv_mask', 'native_icv_mask', 'icv_stats'])
     inputspec = pe.Node(IdentityInterface(fields=inputfields), 'inputspec')
     outputspec = pe.Node(IdentityInterface(fields=outputfields),
                          name='outputspec')
@@ -316,6 +322,7 @@ def main_workflow(statslabels,
                                 'brainstats')
     for qformf in qformfiles:
         wf.connect(inputspec, qformf, forceqform, f'inputspec.{qformf}')
+        wf.connect(forceqform, f'outputspec.{qformf}', outputspec, qformf)
     wf.connect([
         (forceqform, pp, [('outputspec.T1', 'inputspec.T1')]),
         (forceqform,

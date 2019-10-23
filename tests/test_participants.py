@@ -3,11 +3,11 @@ import re
 from TNT_pipeline_2 import cli
 from nipype.pipeline.plugins.tools import report_crash
 
-NUMANAT = 15
+NUMANAT = 19
 NUMXFM = 2
-NUMANAT_SUB = 4
+NUMANAT_SUB = 6
 NUMXFM_SUB = 2
-NUMANAT_ICV = 2
+NUMANAT_ICV = 3
 NUMXFM_ICV = 0
 
 NOARG = 'NOARG'
