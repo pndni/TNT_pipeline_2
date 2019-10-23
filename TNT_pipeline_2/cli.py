@@ -133,6 +133,13 @@ def _get_parser(for_doc=False):
                           metavar='PARTICIPANT_LABEL',
                           help='Subjects on which to run the pipeline. '
                           'If not specified, run on all.')
+    parser_p.add_argument('--model',
+                          type=_resolve_existing_path,
+                          default=_model('SYS_808.nii.gz', for_doc=for_doc),
+                          help='A model/template brain in the same space as '
+                          '"--atlas" and "--tags". '
+                          'Will be registered with T1w images to '
+                          'map template space to native space.')
     parser_p.add_argument(
         '--atlas',
         type=_resolve_existing_path,
