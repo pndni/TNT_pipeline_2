@@ -58,6 +58,9 @@ def preproc_workflow(bet_frac,
     inorm = pe.Node(
         minc.INormalize(const2=inormalize_const2, range=inormalize_range),
         'inorm')
+    inorm_fix_dircos = pe.Node(
+        minc.MncDefaultDircos(),
+        'inorm_fix_dircos')
     inorm_mnc_to_nii = toniigz_workflow('inorm_mnc_to_nii')
     bet = pe.Node(
         fsl.BET(mask=True,
@@ -71,7 +74,8 @@ def preproc_workflow(bet_frac,
     wf.connect(inputspec, 'T1', tomnc_wf, 'inputspec.in_file')
     wf.connect(tomnc_wf, 'outputspec.out_file', nu_correct, 'in_file')
     wf.connect(nu_correct, 'out_file', inorm, 'in_file')
-    wf.connect(inorm, 'out_file', inorm_mnc_to_nii, 'inputspec.in_file')
+    wf.connect(inorm, 'out_file', inorm_fix_dircos, 'in_file')
+    wf.connect(inorm_fix_dircos, 'out_file', inorm_mnc_to_nii, 'inputspec.in_file')
     wf.connect(inorm_mnc_to_nii, 'outputspec.out_file', bet, 'in_file')
     wf.connect(nu_correct, 'out_file', nuc_mnc_to_nii, 'inputspec.in_file')
     wf.connect(nuc_mnc_to_nii, 'outputspec.out_file', mask, 'in_file')
