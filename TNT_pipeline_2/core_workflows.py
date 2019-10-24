@@ -38,9 +38,13 @@ def toniigz_workflow(wfname, **kwargs):
     wf = pe.Workflow(name=wfname)
     inputspec = pe.Node(IdentityInterface(fields=['in_file']), 'inputspec')
     convert = pe.Node(minc.Mnc2nii(**kwargs), 'convert')
+    fix_dircos = pe.Node(
+        pndni_utils.MncDefaultDircos(),
+        'fix_dircos')
     gzip = pe.Node(utils.Gzip(), 'gzip')
     outputspec = pe.Node(IdentityInterface(fields=['out_file']), 'outputspec')
-    wf.connect(inputspec, 'in_file', convert, 'in_file')
+    wf.connect(inputspec, 'in_file', fix_dircos, 'in_file')
+    wf.connect(fix_dircos, 'out_file', convert, 'in_file')
     wf.connect(convert, 'out_file', gzip, 'in_file')
     wf.connect(gzip, 'out_file', outputspec, 'out_file')
     return wf
@@ -58,9 +62,6 @@ def preproc_workflow(bet_frac,
     inorm = pe.Node(
         minc.INormalize(const2=inormalize_const2, range=inormalize_range),
         'inorm')
-    inorm_fix_dircos = pe.Node(
-        pndni_utils.MncDefaultDircos(),
-        'inorm_fix_dircos')
     inorm_mnc_to_nii = toniigz_workflow('inorm_mnc_to_nii')
     bet = pe.Node(
         fsl.BET(mask=True,
@@ -74,8 +75,7 @@ def preproc_workflow(bet_frac,
     wf.connect(inputspec, 'T1', tomnc_wf, 'inputspec.in_file')
     wf.connect(tomnc_wf, 'outputspec.out_file', nu_correct, 'in_file')
     wf.connect(nu_correct, 'out_file', inorm, 'in_file')
-    wf.connect(inorm, 'out_file', inorm_fix_dircos, 'in_file')
-    wf.connect(inorm_fix_dircos, 'out_file', inorm_mnc_to_nii, 'inputspec.in_file')
+    wf.connect(inorm, 'out_file', inorm_mnc_to_nii, 'inputspec.in_file')
     wf.connect(inorm_mnc_to_nii, 'outputspec.out_file', bet, 'in_file')
     wf.connect(nu_correct, 'out_file', nuc_mnc_to_nii, 'inputspec.in_file')
     wf.connect(nuc_mnc_to_nii, 'outputspec.out_file', mask, 'in_file')
