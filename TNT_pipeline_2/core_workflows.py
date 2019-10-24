@@ -59,7 +59,7 @@ def preproc_workflow(bet_frac,
         minc.INormalize(const2=inormalize_const2, range=inormalize_range),
         'inorm')
     inorm_fix_dircos = pe.Node(
-        minc.MncDefaultDircos(),
+        pndni_utils.MncDefaultDircos(),
         'inorm_fix_dircos')
     inorm_mnc_to_nii = toniigz_workflow('inorm_mnc_to_nii')
     bet = pe.Node(
