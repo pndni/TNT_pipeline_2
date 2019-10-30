@@ -245,6 +245,14 @@ def _get_parser(for_doc=False):
                           default=_model('SYS808_icv.nii.gz', for_doc=for_doc),
                           help='Intracranial mask in reference space. '
                           'REQUIRED if "--intracranial_volume" is set.')
+    parser_p.add_argument('--max_shear_angle', type=float, default=1e-6,
+                          help='Input files are pass through forceqform '
+                               'to ensure that only the qform is set. '
+                               'max_shear_angle is the maximum permissible '
+                               'shear in the rotation matrix if only the sform '
+                               'is set. Shear angle is calculated as the '
+                               'the absolute difference between the angles '
+                               'between coordinates and 90 degress.')
     parser_q = parser.add_argument_group(
         'QC Pages Arguments',
         description='Arguments for qcpages analysis level')

@@ -11,12 +11,12 @@ from pndniworkflows.interfaces import pndni_utils
 from pndniworkflows.postprocessing import image_stats_wf
 
 
-def forceqform_workflow(files):
+def forceqform_workflow(files, max_shear_angle):
     wf = pe.Workflow(name='forceqform')
     inputspec = pe.Node(IdentityInterface(fields=files), 'inputspec')
     outputspec = pe.Node(IdentityInterface(fields=files), 'outputspec')
     for f in files:
-        node = pe.Node(pndni_utils.ForceQForm(out_file=f'{f}_qform.nii.gz'), f'forceqc_{f}')
+        node = pe.Node(pndni_utils.ForceQForm(out_file=f'{f}_qform.nii.gz', maxangle=max_shear_angle), f'forceqc_{f}')
         wf.connect(inputspec, f, node, 'in_file')
         wf.connect(node, 'out_file', outputspec, f)
     return wf
@@ -271,7 +271,8 @@ def main_workflow(statslabels,
                   subcortical=False,
                   subcort_statslabels=None,
                   icv=False,
-                  debug=False):
+                  debug=False,
+                  max_shear_angle=1e-6):
     wf = pe.Workflow(name='main')
     inputfields = ['T1', 'model', 'tags', 'atlas', 'model_brain_mask']
     outputfields = [
@@ -312,7 +313,7 @@ def main_workflow(statslabels,
                          name='outputspec')
     qformfiles = inputfields.copy()
     qformfiles.pop(qformfiles.index('tags'))
-    forceqform = forceqform_workflow(qformfiles)
+    forceqform = forceqform_workflow(qformfiles, max_shear_angle)
     pp = preproc_workflow(bet_frac,
                           bet_vertical_gradient,
                           inormalize_const2,
