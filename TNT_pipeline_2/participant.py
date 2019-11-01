@@ -6,8 +6,9 @@ from bids import BIDSLayout
 
 from .core_workflows import main_workflow
 from . import output
-from .utils import _update_workdir
+from .utils import _update_workdir, read_json, adjust_node_name
 from nipype.interfaces import fsl
+from . import logger
 
 
 def participant_workflow(args):
@@ -24,7 +25,36 @@ def participant_workflow(args):
         tmpwf = t1_workflow(T1_scan, T1_entities, outbidslayout, args)
         wf.add_nodes([tmpwf])
     _update_workdir(wf, args.working_directory)
+    _set_resource_data(wf, args.resource_input_file)
     return wf
+
+
+def _get_all_nodes(wf, name=None):
+    """ based on nipypes Workflow._get_all_nodes, but keeps
+    track of full node name"""
+    if name is None:
+        name = []
+    else:
+        name = name.copy()
+    name.append(wf.name)
+    for node in wf._graph.nodes():
+        if isinstance(node, pe.Workflow):
+            yield from _get_all_nodes(node, name)
+        else:
+            yield ('.'.join(name + [node.name]), node)
+
+
+def _set_resource_data(wf, fname):
+    data = read_json(fname)
+    for fullname, node in _get_all_nodes(wf):
+        nameadj = adjust_node_name(fullname)
+        if nameadj in data:
+            if not hasattr(node._interface.inputs, 'num_threads'):
+                node.n_procs = int(data[nameadj]['ncpu'])
+            # This is a bit of a hack because Node does not define a setter
+            # for mem_gb
+            node._mem_gb = float(data[nameadj]['mem'])
+            logger.info(f'Set {node} (fullname {fullname}) _mem_gb to {node._mem_gb} and n_procs to {node.n_procs}')
 
 
 def t1_workflow(T1_scan, entities, outbidslayout, args):

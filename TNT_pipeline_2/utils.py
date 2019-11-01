@@ -2,6 +2,8 @@ import errno
 import io
 from pathlib import Path
 from pndniworkflows import utils
+import json
+import numpy as np
 
 
 class Labels(object):
@@ -66,3 +68,77 @@ def _update_workdir(wf, workdir):
             errno.ENOENT,
             'Specified working directory ({workdir}) does not exist')
     wf.base_dir = str(workdir)
+
+
+def read_json(fname):
+    with open(fname, 'r') as f:
+        return json.load(f)
+
+
+def write_json(obj, fname):
+    with open(fname, 'w') as f:
+        json.dump(obj, f, indent=4)
+
+
+def load_resources_file(fname):
+    resources = read_json(fname)
+    keys = ['rss_GiB', 'vms_GiB', 'cpus', 'time']
+    length = len(resources['name'])
+    for k in keys:
+        if len(resources[k]) != length:
+            raise RuntimeError(f'Length of "{k}" in {fname} does not match length of "name"')
+    out = {}
+    for i in range(length):
+        name = resources['name'][i]
+        if name not in out:
+            out[name] = {}
+        for k in keys:
+            if k not in out[name]:
+                out[name][k] = []
+            out[name][k].append(float(resources[k][i]))
+    return out
+
+
+def calc_opt_resources(resources, mintime=1.0, mininterval=0.1):
+    out = {}
+    for name, data in resources.items():
+        out[name] = {}
+        deltatimes = np.diff(data['time'])
+        cpus = np.array(data['cpus'][1:])
+        inds = deltatimes > mininterval
+        if np.any(inds):
+            cpumax = np.max(cpus[inds])
+        else:
+            cpumax = None
+        totaltime = data['time'][-1] - data['time'][0]
+        if totaltime < mintime or cpumax is None:
+            ncpu = 1
+        else:
+            ncpu = max(int(np.ceil(cpumax / 100.0)), 1)
+        out[name]['ncpu'] = ncpu
+        out[name]['cpumax'] = cpumax
+        out[name]['mem'] = np.max(data['rss_GiB'])
+        out[name]['time'] = totaltime
+    out2 = {}
+    for name, data in out.items():
+        nameadj = adjust_node_name(name)
+        if nameadj not in out2:
+            out2[nameadj] = data
+        else:
+            for k in data.keys():
+                if data[k] is not None:
+                    if out2[nameadj][k] is None or data[k] > out2[nameadj][k]:
+                        out2[nameadj][k] = data[k]
+    return out2
+
+
+def adjust_node_name(name):
+    namesplit = name.split('.')
+    if namesplit[0] == 'participant':
+        T1 = namesplit.pop(1)
+        if T1[:3] != 'T1_':
+            raise RuntimeError(f'Unexpected node name: {name}')
+        nameadj = '.'.join(namesplit)
+    else:
+        nameadj = name
+    return nameadj

@@ -1,15 +1,19 @@
 import argparse
 import errno
-from nipype import config
+import json
+import nipype
 from pathlib import Path
 from PipelineQC.main import qc_all
 from pkg_resources import resource_filename
 from pndniworkflows import utils
+import warnings
+import logging
 
 from .group import group_workflow
 from .participant import participant_workflow
-from .utils import Labels
+from .utils import Labels, load_resources_file, calc_opt_resources
 from . import qc
+from . import logger
 
 PIPELINE_NAME = 'Toronto Pipeline'
 
@@ -20,13 +24,25 @@ def get_parser():
 
 def main():
     args = parse_args()
-    config.update_config({'execution': {'crashfile_format': 'txt'}})
+    nipype.config.update_config({'execution': {'crashfile_format': 'txt'},
+                                 'logging': {'workflow_level': args.loglevel,
+                                             'utils_level': args.loglevel,
+                                             'interface_level': args.loglevel}})
+    logger.setLevel(getattr(logging, args.loglevel))
+    if args.profiling_output_file:
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            nipype.config.enable_resource_monitor()
+        nipype.config.set('monitoring', 'summary_file', str(args.profiling_output_file))
+    nipype.logging.update_logging(nipype.config)  # needed so log level takes effect
     if args.analysis_level == 'participant':
         run_participant(args)
     elif args.analysis_level == 'group':
         run_group(args)
     elif args.analysis_level == 'qcpages':
         run_qc(args)
+    elif args.analysis_level == 'create_resource_file':
+        run_create_resource_file(args)
     else:
         raise ValueError(
             'Invalid value for analysis_level. How did you get here?')
@@ -36,6 +52,12 @@ def parse_args():
     args = get_parser().parse_args()
     _update_args(args)
     return args
+
+
+def run_create_resource_file(args):
+    out = calc_opt_resources(load_resources_file(args.profiling_input_file))
+    with open(args.resource_output_file, 'w') as f:
+        json.dump(out, f, indent=4)
 
 
 def run_group(args):
@@ -80,11 +102,13 @@ def _get_parser(for_doc=False):
                         help='Output directory')
     parser.add_argument('analysis_level',
                         type=str,
-                        choices=['participant', 'group', 'qcpages'],
+                        choices=['participant', 'group', 'qcpages', 'create_resource_file'],
                         help='"participant" runs the main pipeline '
                         'on each subject independently. '
                         '"group" consolidates the results. '
-                        '"qcpages" uses PipelineQC to generate QC pages.')
+                        '"qcpages" uses PipelineQC to generate QC pages. '
+                        '"create_resource_file" uses profiling data (--profiling_output_file) '
+                        'to create a resource file with processor and memory usage for each node.')
     parser_b = parser.add_argument_group(
         'General Arguments', description='Arguments for all analysis levels')
     parser_b.add_argument('--working_directory',
@@ -104,6 +128,17 @@ def _get_parser(for_doc=False):
         type=int,
         help='The number of processors to use with the '
         'MultiProc plugin. If not set determine automatically.')
+    parser_b.add_argument(
+        '--profiling_output_file',
+        type=Path,
+        help='If set, set resource monitoring in nipype and save results to'
+             'this file (JSON format).')
+    parser_b.add_argument('--loglevel',
+                          type=str,
+                          default='INFO',
+                          choices=['INFO', 'DEBUG'],
+                          help='Log level passed to nipype configuration variables '
+                               'workflow_level, utils_level, and interface_level.')
     parser_qcp = parser.add_argument_group(
         'Participant and QC pages arguments',
         description='Arguments for "participant" and "qcpages"')
@@ -253,12 +288,29 @@ def _get_parser(for_doc=False):
                                'is set. Shear angle is calculated as the '
                                'the absolute difference between the angles '
                                'between coordinates and 90 degress.')
+    parser_p.add_argument('--resource_input_file',
+                          type=_resolve_existing_path,
+                          help='JSON file of node usage. Created using '
+                               'create_resource_file command. This will set '
+                               'the processor count and memory usage for each '
+                               'node based on the profiling run.')
     parser_q = parser.add_argument_group(
         'QC Pages Arguments',
         description='Arguments for qcpages analysis level')
     parser_q.add_argument('--qc_config_file',
                           type=argparse.FileType('r'),
                           help='Configuration file passed to PipelineQC.')
+    parser_r = parser.add_argument_group(
+        'Create resource file arguments',
+        description='Arguments for the create_resource_file analysis level')
+    parser_r.add_argument(
+        '--profiling_input_file',
+        type=_resolve_existing_path,
+        help='Output from --profiling_output_file')
+    parser_r.add_argument(
+        '--resource_output_file',
+        type=Path,
+        help='Resource file to be passed to --resource_input_file')
     return parser
 
 
