@@ -129,6 +129,11 @@ def _get_parser(for_doc=False):
         help='The number of processors to use with the '
         'MultiProc plugin. If not set determine automatically.')
     parser_b.add_argument(
+        '--memory_gb',
+        type=float,
+        help='Max memory parameter to use with the '
+        'MultiProc plugin. If not set determine automatically.')
+    parser_b.add_argument(
         '--profiling_output_file',
         type=Path,
         help='If set, set resource monitoring in nipype and save results to'
@@ -326,6 +331,12 @@ def _get_plugin_args(args):
                 '--n_proc may only be specified with --nipype_plugin=MultiProc'
             )
         plugin_args['n_proc'] = args.n_proc
+    if args.memory_gb is not None:
+        if args.nipype_plugin != 'MultiProc':
+            raise ValueError(
+                '--memory_gp may only be specified with --nipype_plugin=MultiProc'
+            )
+        plugin_args['memory_gb'] = args.memory_gb
     if args.nipype_plugin == 'Debug':
 
         def donothing(*args):
