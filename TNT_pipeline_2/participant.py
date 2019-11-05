@@ -25,7 +25,8 @@ def participant_workflow(args):
         tmpwf = t1_workflow(T1_scan, T1_entities, outbidslayout, args)
         wf.add_nodes([tmpwf])
     _update_workdir(wf, args.working_directory)
-    _set_resource_data(wf, args.resource_input_file)
+    if args.resource_input_file is not None:
+        _set_resource_data(wf, args.resource_input_file)
     return wf
 
 
