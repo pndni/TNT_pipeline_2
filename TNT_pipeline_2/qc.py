@@ -66,16 +66,20 @@ def make_config(model_space,
             {
                 "type": "compare",
                 "name1": "T1 weighted input",
-                "image1": "T1",
+                "image1": "T1"
+            },
+            {
+                "type": "compare",
+                "name1": "Non-uniformity corrected brain",
+                "image1": "nu_bet",
                 "name2": "non-uniformity corrected and normalized",
                 "image2": "normalized",
             },
             {
-                "type": "compare",
-                "name1": "T1 weighted input",
-                "image1": "T1",
-                "name2": "Non-uniformity corrected brain",
-                "image2": "nu_bet"
+                "type": "contour",
+                "name": "BET",
+                "image": "T1",
+                "labelimage": "brain_mask"
             },
             {
                 "type": "compare",
@@ -97,7 +101,7 @@ def make_config(model_space,
                 "labelfile": "features_label",
             },
             {
-                "type": "contour",
+                "type": "overlay",
                 "name": "Tissue segmentation",
                 "image": "T1",
                 "labelimage": "classified"
@@ -153,33 +157,30 @@ def make_config(model_space,
         {
             "type": "rating",
             "name": "Rating",
-            "radio": {
-                "name":
-                "Overall",
-                "options": [
-                    {
-                        "name": "Reject", "value": 1
-                    },
-                    {
-                        "name": "Poor", "value": 2
-                    },
-                    {
-                        "name": "Fair", "value": 3
-                    },
-                    {
-                        "name": "Good", "value": 4
-                    },
-                    {
-                        "name": "Excellent", "value": 5
-                    },
-                ]
-            },
-            "checkbox": {
-                "name": "Notes", "fields": fields
-            },
-            "text": {
-                "name": "Other"
-            }
+            "widgets": [
+                {
+                    "type": "radio",
+                    "name":
+                    "Overall",
+                    "options": [
+                        {
+                            "name": "Poor (1)", "value": 1
+                        },
+                        {
+                            "name": "Fair (0.5)", "value": 0.5
+                        },
+                        {
+                            "name": "Good (0.0)", "value": 0
+                        },
+                    ]
+                },
+                {
+                    "name": "Notes", "fields": fields, "type": "checkbox"
+                },
+                {
+                    "name": "Other", "type": "text"
+                }
+            ]
         },
     ])
     return conf

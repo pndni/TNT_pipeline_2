@@ -15,8 +15,6 @@ from .utils import Labels, load_resources_file, calc_opt_resources
 from . import qc
 from . import logger
 
-PIPELINE_NAME = 'Toronto Pipeline'
-
 
 def get_parser():
     return _get_parser()

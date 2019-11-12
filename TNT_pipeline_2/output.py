@@ -1,5 +1,5 @@
 from nipype.pipeline import engine as pe
-from nipype import IdentityInterface, Rename
+from nipype import IdentityInterface
 from pndniworkflows.interfaces import io
 from pndniworkflows.utils import first_nonunique
 from pathlib import Path
@@ -38,7 +38,7 @@ def get_outputinfo(model_space,
         'extension': 'nii.gz'
     }
     outputinfo['normalized'] = {
-        'skullstripped': 'true',
+        'skullstripped': 'false',
         'desc': 'normalized',
         'suffix': 'T1w',
         'extension': 'nii.gz'
@@ -238,13 +238,9 @@ def io_out_workflow(bidslayout,
         raise RuntimeError(
             'Duplicate output files detected! {}'.format(duplicate))
     for sourcename in outputinfo.keys():
-        if debug:
-            node = pe.Node(Rename(format_string=outputfilenames[sourcename]),
-                           name='write' + sourcename)
-        else:
-            node = pe.Node(io.ExportFile(out_file=outputfilenames[sourcename],
-                                         check_extension=True),
-                           name='write' + sourcename)
+        node = pe.Node(io.ExportFile(out_file=outputfilenames[sourcename],
+                                     check_extension=not debug),
+                       name='write' + sourcename)
         wf.connect(inputspec, sourcename, node, 'in_file')
         if sourcename in outputlabels:
             labelnode = pe.Node(

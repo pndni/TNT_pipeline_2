@@ -8,9 +8,9 @@ setup(
     install_requires=[
         'nipype @ https://github.com/stilley2/nipype/archive/1.2.3-mod.zip',
         'pybids>=0.9.4',
-        'pndniworkflows @ git+https://github.com/pndni/pndniworkflows.git@505e113d684deb0ca49782d3b51e973f834caeb8',
-        'pndni_utils @ git+https://github.com/pndni/pndni_utils.git@e483e37cf9eb39fdbb1d54bbd3585894da85deb5',
-        'PipelineQC @ https://github.com/pndni/PipelineQC/archive/0.10.0.zip',
+        'pndniworkflows @ git+https://github.com/pndni/pndniworkflows.git@741825251b5c2b068cf711e02cc2257cf7a57e61',
+        'pndni_utils @ git+https://github.com/pndni/pndni_utils.git@8774cbef065d61761952e9118aa12f9aeda4f07e',
+        'PipelineQC @ https://github.com/pndni/PipelineQC/archive/0.13.1.zip',
     ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],

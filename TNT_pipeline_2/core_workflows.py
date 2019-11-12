@@ -96,7 +96,7 @@ def ants_workflow(debug=False):
             fields=['normalized', 'model', 'tags', 'model_brain_mask']),
         'inputspec')
     converttags = pe.Node(
-        utils.ConvertPoints(in_format='tsv', out_format='ants'), 'converttags')
+        pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
     nlreg = pe.Node(ants_registration_syn_node(verbose=True), 'nlreg')
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
@@ -105,7 +105,7 @@ def ants_workflow(debug=False):
     trpoints = pe.Node(resampling.ApplyTransformsToPoints(dimension=3),
                        'trpoints')
     converttags2 = pe.Node(
-        utils.ConvertPoints(in_format='ants', out_format='minc'),
+        pndni_utils.ConvertPoints(out_format='minc'),
         'converttags2')
     trbrain = pe.Node(
         resampling.ApplyTransforms(dimension=3,
@@ -169,7 +169,7 @@ def classify_workflow():
         (tomnc, classify, [('outputspec.out_file', 'in_file')]),
         (classify, tonii, [('out_file', 'inputspec.in_file')]),
         (tonii, outputspec, [('outputspec.out_file', 'classified')]),
-        (inputspec, extract_features, [('trminctags', 'tag_file')]),
+        (inputspec, extract_features, [('trminctags', 'tag_file'), ('brain_mask', 'mask_file')]),
         (tomnc, extract_features, [('outputspec.out_file', 'in_file')]),
         (extract_features, convert_features, [('features', 'in_file')]),
         (convert_features, outputspec, [('out_file', 'features')]),
@@ -336,7 +336,8 @@ def main_workflow(statslabels,
           ('outputspec.model_brain_mask', 'inputspec.model_brain_mask')]),
         (inputspec, ants, [('tags', 'inputspec.tags')]),
         (pp, ants, [('outputspec.normalized', 'inputspec.normalized')]),
-        (pp, classify, [('outputspec.nu_bet', 'inputspec.nu_bet')]),
+        (pp, classify, [('outputspec.nu_bet', 'inputspec.nu_bet'),
+                        ('outputspec.brain_mask', 'inputspec.brain_mask')]),
         (ants, classify, [('outputspec.trminctags', 'inputspec.trminctags')]),
         (ants, segment, [('outputspec.transform', 'inputspec.transform')]),
         (classify,
