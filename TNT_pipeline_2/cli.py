@@ -85,7 +85,9 @@ def run_qc(args):
            args.output_folder / 'QC',
            conf,
            plugin=args.nipype_plugin,
-           working_directory=args.working_directory)
+           working_directory=args.working_directory,
+           plugin_args=args.plugin_args,
+           bids_validate=not args.skip_validation)
 
 
 def _get_parser(for_doc=False):
@@ -108,7 +110,7 @@ def _get_parser(for_doc=False):
                         '"create_resource_file" uses profiling data (--profiling_output_file) '
                         'to create a resource file with processor and memory usage for each node.')
     parser_b = parser.add_argument_group(
-        'General Arguments', description='Arguments for all analysis levels')
+        'General Arguments', description='Arguments for all analysis levels (except create_resource_file)')
     parser_b.add_argument('--working_directory',
                           type=_resolve_existing_path,
                           help='(Passed to the nipype workflow)')

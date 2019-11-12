@@ -90,3 +90,11 @@ Pipeline Overview
       from TNT_pipeline_2.core_workflows import toniigz_workflow
       wf = toniigz_workflow('name')
 
+.. autofunction:: TNT_pipeline_2.core_workflows.forceqform_workflow
+
+   .. workflow::
+      :graph2use: orig
+      :simple_form: no
+
+      from TNT_pipeline_2.core_workflows import forceqform_workflow
+      wf = forceqform_workflow(['example_file'], 1e-6)
