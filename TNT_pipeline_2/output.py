@@ -37,12 +37,6 @@ def get_outputinfo(model_space,
         'suffix': 'T1w',
         'extension': 'nii.gz'
     }
-    outputinfo['nu_bet'] = {
-        'skullstripped': 'true',
-        'desc': 'nucor',
-        'suffix': 'T1w',
-        'extension': 'nii.gz'
-    }
     outputinfo['normalized'] = {
         'skullstripped': 'false',
         'desc': 'normalized',
