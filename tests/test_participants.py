@@ -4,7 +4,7 @@ from TNT_pipeline_2 import cli, qc
 from nipype.pipeline.plugins.tools import report_crash
 from PipelineQC.get_files import get_files
 
-NUMANAT = 19
+NUMANAT = 20
 NUMXFM = 2
 NUMANAT_SUB = 6
 NUMXFM_SUB = 2

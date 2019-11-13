@@ -70,7 +70,7 @@ def preproc_workflow(bet_frac,
         'bet')
     mask = pe.Node(fsl.ImageMaths(), 'mask')
     outputspec = pe.Node(
-        IdentityInterface(fields=['nu_bet', 'normalized', 'brain_mask']),
+        IdentityInterface(fields=['nu_bet', 'nu', 'normalized', 'brain_mask']),
         'outputspec')
     wf.connect(inputspec, 'T1', tomnc_wf, 'inputspec.in_file')
     wf.connect(tomnc_wf, 'outputspec.out_file', nu_correct, 'in_file')
@@ -86,6 +86,7 @@ def preproc_workflow(bet_frac,
                'outputspec.out_file',
                outputspec,
                'normalized')
+    wf.connect(nuc_mnc_to_nii, 'outputspec.out_file', outputspec, 'nu')
     return wf
 
 
@@ -151,6 +152,7 @@ def classify_workflow():
         IdentityInterface(fields=['nu_bet', 'trminctags', 'brain_mask']),
         'inputspec')
     tomnc = tomnc_workflow('to_mnc')
+    tomnc_brain_mask = tomnc_workflow('to_mnc_brain_mask')
     classify = pe.Node(minc.Classify(), 'classify')
     extract_features = pe.Node(minc.Classify(dump_features=True),
                                'extract_features')
@@ -163,8 +165,10 @@ def classify_workflow():
                          'outputspec')
     # TODO points outside mask?
     wf.connect([
+        (inputspec, tomnc_brain_mask, [('brain_mask', 'inputspec.in_file')]),
         (inputspec,
-         classify, [('trminctags', 'tag_file'), ('brain_mask', 'mask_file')]),
+         classify, [('trminctags', 'tag_file')]),
+        (tomnc_brain_mask, classify, [('outputspec.out_file', 'mask_file')]),
         (inputspec, tomnc, [('nu_bet', 'inputspec.in_file')]),
         (tomnc, classify, [('outputspec.out_file', 'in_file')]),
         (classify, tonii, [('out_file', 'inputspec.in_file')]),
@@ -280,6 +284,7 @@ def main_workflow(statslabels,
         'model',
         'atlas',
         'model_brain_mask',
+        'nu',
         'nu_bet',
         'normalized',
         'brain_mask',
@@ -345,12 +350,12 @@ def main_workflow(statslabels,
         (forceqform, segment, [('outputspec.atlas', 'inputspec.atlas')]),
         (segment,
          stats, [('outputspec.segmented', 'inputspec.index_mask_file')]),
-        (pp, stats, [('outputspec.nu_bet', 'inputspec.in_file')]),
+        (pp, stats, [('outputspec.nu', 'inputspec.in_file')]),
         (ants,
          brainstats,
          [('outputspec.transformed_model_brain_mask',
            'inputspec.index_mask_file')]),
-        (pp, brainstats, [('outputspec.nu_bet', 'inputspec.in_file')]),
+        (pp, brainstats, [('outputspec.nu', 'inputspec.in_file')]),
         (pp,
          outputspec,
          [('outputspec.nu_bet', 'nu_bet'),
@@ -397,7 +402,7 @@ def main_workflow(statslabels,
                'warped_subcortical_model'),
               ('outputspec.native_subcortical_atlas',
                'native_subcortical_atlas')]),
-            (pp, subcort_stats, [('outputspec.nu_bet', 'inputspec.in_file')]),
+            (pp, subcort_stats, [('outputspec.nu', 'inputspec.in_file')]),
             (subcort,
              subcort_stats,
              [('outputspec.native_subcortical_atlas',
@@ -419,7 +424,7 @@ def main_workflow(statslabels,
             (icv_wf,
              icv_stats, [
                  ('outputspec.native_icv_mask', 'inputspec.index_mask_file')
-             ]), (pp, icv_stats, [('outputspec.nu_bet', 'inputspec.in_file')]),
+             ]), (pp, icv_stats, [('outputspec.nu', 'inputspec.in_file')]),
             (icv_stats, outputspec, [('outputspec.out_file', 'icv_stats')])
         ])
     return wf

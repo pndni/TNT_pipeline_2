@@ -66,7 +66,9 @@ def make_config(model_space,
             {
                 "type": "compare",
                 "name1": "T1 weighted input",
-                "image1": "T1"
+                "image1": "T1",
+                "name2": "Non-uniformity corrected brain",
+                "image2": "nu_bet",
             },
             {
                 "type": "compare",

@@ -31,6 +31,12 @@ def get_outputinfo(model_space,
         'desc': 'brain',
         'extension': 'nii.gz'
     }
+    outputinfo['nu'] = {
+        'skullstripped': 'false',
+        'desc': 'nucor',
+        'suffix': 'T1w',
+        'extension': 'nii.gz'
+    }
     outputinfo['nu_bet'] = {
         'skullstripped': 'true',
         'desc': 'nucor',

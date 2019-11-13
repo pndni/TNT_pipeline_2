@@ -96,6 +96,7 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
         io_out_wf.inputs.inputspec.model = T1_scan
         io_out_wf.inputs.inputspec.atlas = T1_scan
         io_out_wf.inputs.inputspec.model_brain_mask = T1_scan
+        io_out_wf.inputs.inputspec.nu = T1_scan
         io_out_wf.inputs.inputspec.nu_bet = T1_scan
         io_out_wf.inputs.inputspec.normalized = T1_scan
         io_out_wf.inputs.inputspec.brain_mask = T1_scan
