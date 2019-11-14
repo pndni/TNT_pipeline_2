@@ -114,7 +114,10 @@ def make_config(model_space,
                 "image": "T1",
                 "labelimage": "transformed_atlas"
             },
-        ]
+        ],
+        "global_reportlet_settings": {
+            "affine_absolute_tolerance": 1e-3
+        }
     }
     for k, v in outfiles.items():
         if k == 'T1':

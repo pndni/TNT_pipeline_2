@@ -79,6 +79,9 @@ def run_qc(args):
                               args.subcortical,
                               args.subcortical_model_space,
                               args.intracranial_volume)
+        if args.qc_config_file_out:
+            with open(args.qc_config_file_out, 'w') as f:
+                json.dump(conf, f, indent=4)
     else:
         conf = args.qc_config_file
     qc_all([args.output_folder],
@@ -305,6 +308,9 @@ def _get_parser(for_doc=False):
     parser_q.add_argument('--qc_config_file',
                           type=argparse.FileType('r'),
                           help='Configuration file passed to PipelineQC.')
+    parser_q.add_argument('--qc_config_file_out',
+                          type=Path,
+                          help='Output file name for qc config (JSON)')
     parser_r = parser.add_argument_group(
         'Create resource file arguments',
         description='Arguments for the create_resource_file analysis level')
