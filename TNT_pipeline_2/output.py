@@ -1,5 +1,6 @@
 from nipype.pipeline import engine as pe
 from nipype import IdentityInterface
+from nipype.interfaces.io import ExportFile
 from pndniworkflows.interfaces import io
 from pndniworkflows.utils import first_nonunique
 from pathlib import Path
@@ -238,8 +239,8 @@ def io_out_workflow(bidslayout,
         raise RuntimeError(
             'Duplicate output files detected! {}'.format(duplicate))
     for sourcename in outputinfo.keys():
-        node = pe.Node(io.ExportFile(out_file=outputfilenames[sourcename],
-                                     check_extension=not debug),
+        node = pe.Node(ExportFile(out_file=outputfilenames[sourcename],
+                                  check_extension=not debug),
                        name='write' + sourcename)
         wf.connect(inputspec, sourcename, node, 'in_file')
         if sourcename in outputlabels:

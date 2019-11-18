@@ -34,18 +34,20 @@ def tomnc_workflow(wfname):
     return wf
 
 
-def toniigz_workflow(wfname, **kwargs):
+def toniigz_workflow(wfname, max_shear_angle, **kwargs):
     wf = pe.Workflow(name=wfname)
     inputspec = pe.Node(IdentityInterface(fields=['in_file']), 'inputspec')
-    convert = pe.Node(minc.Mnc2nii(**kwargs), 'convert')
     fix_dircos = pe.Node(
         pndni_utils.MncDefaultDircos(),
         'fix_dircos')
+    convert = pe.Node(minc.Mnc2nii(**kwargs), 'convert')
+    forceqform = pe.Node(pndni_utils.ForceQForm(maxangle=max_shear_angle), 'forceqform')
     gzip = pe.Node(utils.Gzip(), 'gzip')
     outputspec = pe.Node(IdentityInterface(fields=['out_file']), 'outputspec')
     wf.connect(inputspec, 'in_file', fix_dircos, 'in_file')
     wf.connect(fix_dircos, 'out_file', convert, 'in_file')
-    wf.connect(convert, 'out_file', gzip, 'in_file')
+    wf.connect(convert, 'out_file', forceqform, 'in_file')
+    wf.connect(forceqform, 'out_file', gzip, 'in_file')
     wf.connect(gzip, 'out_file', outputspec, 'out_file')
     return wf
 
@@ -53,16 +55,17 @@ def toniigz_workflow(wfname, **kwargs):
 def preproc_workflow(bet_frac,
                      bet_vertical_gradient,
                      inormalize_const2,
-                     inormalize_range):
+                     inormalize_range,
+                     max_shear_angle):
     wf = pe.Workflow(name="preproc")
     inputspec = pe.Node(IdentityInterface(fields=['T1']), 'inputspec')
     tomnc_wf = tomnc_workflow('to_mnc')
     nu_correct = pe.Node(minc.NUCorrect(), 'nu_correct')
-    nuc_mnc_to_nii = toniigz_workflow('nuc_mnc_to_nii')
+    nuc_mnc_to_nii = toniigz_workflow('nuc_mnc_to_nii', max_shear_angle)
     inorm = pe.Node(
         minc.INormalize(const2=inormalize_const2, range=inormalize_range),
         'inorm')
-    inorm_mnc_to_nii = toniigz_workflow('inorm_mnc_to_nii')
+    inorm_mnc_to_nii = toniigz_workflow('inorm_mnc_to_nii', max_shear_angle)
     bet = pe.Node(
         fsl.BET(mask=True,
                 frac=bet_frac,
@@ -146,7 +149,7 @@ def ants_workflow(debug=False):
     return wf
 
 
-def classify_workflow():
+def classify_workflow(max_shear_angle):
     wf = pe.Workflow(name='classify')
     inputspec = pe.Node(
         IdentityInterface(fields=['nu_bet', 'trminctags', 'brain_mask']),
@@ -159,7 +162,7 @@ def classify_workflow():
     convert_features = pe.Node(utils.Csv2Tsv(header=['value', 'index']),
                                'convert_features')
     tonii = toniigz_workflow(
-        'mnc2nii', write_byte=True,
+        'mnc2nii', max_shear_angle, write_byte=True,
         write_unsigned=True)  # TODO can I always assume this?
     outputspec = pe.Node(IdentityInterface(fields=['classified', 'features']),
                          'outputspec')
@@ -321,9 +324,10 @@ def main_workflow(statslabels,
     pp = preproc_workflow(bet_frac,
                           bet_vertical_gradient,
                           inormalize_const2,
-                          inormalize_range)
+                          inormalize_range,
+                          max_shear_angle)
     ants = ants_workflow(debug=debug)
-    classify = classify_workflow()
+    classify = classify_workflow(max_shear_angle)
     segment = segment_lobes_workflow()
     stats = image_stats_wf(['volume', 'mean'], statslabels, 'stats')
     brainstats = image_stats_wf(['volume', 'mean'],

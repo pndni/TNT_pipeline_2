@@ -1,5 +1,6 @@
 from nipype.pipeline import engine as pe
-from pndniworkflows.interfaces.io import CombineStats, ExportFile
+from nipype.interfaces.io import ExportFile
+from pndniworkflows.interfaces.io import CombineStats
 from .utils import _update_workdir
 
 

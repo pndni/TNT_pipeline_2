@@ -6,7 +6,7 @@ setup(
     version='dev',
     packages=find_packages('TNT_pipeline_2'),
     install_requires=[
-        'nipype @ https://github.com/stilley2/nipype/archive/1.2.3-mod.zip',
+        'nipype>=1.3.1',
         'pybids>=0.9.4',
         'pndniworkflows @ git+https://github.com/pndni/pndniworkflows.git@741825251b5c2b068cf711e02cc2257cf7a57e61',
         'pndni_utils @ git+https://github.com/pndni/pndni_utils.git@8774cbef065d61761952e9118aa12f9aeda4f07e',

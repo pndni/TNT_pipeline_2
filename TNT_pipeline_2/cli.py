@@ -82,6 +82,7 @@ def run_qc(args):
         if args.qc_config_file_out:
             with open(args.qc_config_file_out, 'w') as f:
                 json.dump(conf, f, indent=4)
+            return
     else:
         conf = args.qc_config_file
     qc_all([args.output_folder],
