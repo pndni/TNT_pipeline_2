@@ -303,6 +303,11 @@ def _get_parser(for_doc=False):
                                'create_resource_file command. This will set '
                                'the processor count and memory usage for each '
                                'node based on the profiling run.')
+    parser_p.add_argument('--ants_n_proc',
+                          type=int,
+                          default=-1,
+                          help='Number of processors to use for ANTs tools. '
+                          '-1 means determine automatically.')
     parser_q = parser.add_argument_group(
         'QC Pages Arguments',
         description='Arguments for qcpages analysis level')

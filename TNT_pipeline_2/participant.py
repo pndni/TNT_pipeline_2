@@ -150,7 +150,8 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
             subcortical=args.subcortical,
             subcort_statslabels=args.subcortical_labels.labels,
             icv=args.intracranial_volume,
-            max_shear_angle=args.max_shear_angle)
+            max_shear_angle=args.max_shear_angle,
+            num_threads=args.ants_n_proc)
         main_wf.inputs.inputspec.model = args.model
         main_wf.inputs.inputspec.tags = args.tags
         main_wf.inputs.inputspec.atlas = args.atlas

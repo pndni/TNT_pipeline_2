@@ -93,7 +93,7 @@ def preproc_workflow(bet_frac,
     return wf
 
 
-def ants_workflow(debug=False):
+def ants_workflow(debug=False, num_threads=-1):
     wf = pe.Workflow(name='ants')
     inputspec = pe.Node(
         IdentityInterface(
@@ -101,19 +101,20 @@ def ants_workflow(debug=False):
         'inputspec')
     converttags = pe.Node(
         pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
-    nlreg = pe.Node(ants_registration_syn_node(verbose=True), 'nlreg')
+    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
                                              [1, 1, 1, 1]]
     trinvmerge = pe.Node(Merge(1), 'trinvmerge')
-    trpoints = pe.Node(resampling.ApplyTransformsToPoints(dimension=3),
+    trpoints = pe.Node(resampling.ApplyTransformsToPoints(dimension=3, num_threads=num_threads),
                        'trpoints')
     converttags2 = pe.Node(
         pndni_utils.ConvertPoints(out_format='minc'),
         'converttags2')
     trbrain = pe.Node(
         resampling.ApplyTransforms(dimension=3,
-                                   interpolation='NearestNeighbor'),
+                                   interpolation='NearestNeighbor',
+                                   num_threads=num_threads),
         'trbrain')
     outputspec = pe.Node(
         IdentityInterface(fields=[
@@ -184,13 +185,13 @@ def classify_workflow(max_shear_angle):
     return wf
 
 
-def segment_lobes_workflow():
+def segment_lobes_workflow(num_threads=-1):
     wf = pe.Workflow(name='segment_lobes')
     inputspec = pe.Node(
         IdentityInterface(fields=['classified', 'transform', 'atlas']),
         'inputspec')
     tratlas = pe.Node(
-        resampling.ApplyTransforms(dimension=3, interpolation='MultiLabel'),
+        resampling.ApplyTransforms(dimension=3, interpolation='MultiLabel', num_threads=num_threads),
         'tratlas')
     labelsmerge = pe.Node(Merge(2), name='labelsmerge')
     combinelabels = pe.Node(pndni_utils.CombineLabels(), name='combinelabels')
@@ -211,18 +212,18 @@ def segment_lobes_workflow():
     return wf
 
 
-def subcortical_workflow(debug=False):
+def subcortical_workflow(debug=False, num_threads=-1):
     wf = pe.Workflow(name='subcortical')
     inputspec = pe.Node(
         IdentityInterface(
             fields=['normalized', 'subcortical_model', 'subcortical_atlas']),
         'inputspec')
-    nlreg = pe.Node(ants_registration_syn_node(verbose=True), 'nlreg')
+    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
                                              [1, 1, 1, 1]]
     tratlas = pe.Node(
-        resampling.ApplyTransforms(dimension=3, interpolation='MultiLabel'),
+        resampling.ApplyTransforms(dimension=3, interpolation='MultiLabel', num_threads=num_threads),
         'tratlas')
     outputspec = pe.Node(
         IdentityInterface(fields=[
@@ -251,14 +252,15 @@ def subcortical_workflow(debug=False):
     return wf
 
 
-def icv_workflow():
+def icv_workflow(num_threads=-1):
     wf = pe.Workflow('icv')
     inputspec = pe.Node(
         IdentityInterface(fields=['icv_mask', 'transform', 'nu_bet']),
         'inputspec')
     tricv = pe.Node(
         resampling.ApplyTransforms(dimension=3,
-                                   interpolation='NearestNeighbor'),
+                                   interpolation='NearestNeighbor',
+                                   num_threads=num_threads),
         'tricv')
     outputspec = pe.Node(IdentityInterface(fields=['native_icv_mask']),
                          'outputspec')
@@ -279,7 +281,8 @@ def main_workflow(statslabels,
                   subcort_statslabels=None,
                   icv=False,
                   debug=False,
-                  max_shear_angle=1e-6):
+                  max_shear_angle=1e-6,
+                  num_threads=-1):
     wf = pe.Workflow(name='main')
     inputfields = ['T1', 'model', 'tags', 'atlas', 'model_brain_mask']
     outputfields = [
@@ -326,9 +329,9 @@ def main_workflow(statslabels,
                           inormalize_const2,
                           inormalize_range,
                           max_shear_angle)
-    ants = ants_workflow(debug=debug)
+    ants = ants_workflow(debug=debug, num_threads=num_threads)
     classify = classify_workflow(max_shear_angle)
-    segment = segment_lobes_workflow()
+    segment = segment_lobes_workflow(num_threads=num_threads)
     stats = image_stats_wf(['volume', 'mean'], statslabels, 'stats')
     brainstats = image_stats_wf(['volume', 'mean'],
                                 [OrderedDict(index=1, name='brain')],
@@ -386,7 +389,7 @@ def main_workflow(statslabels,
         if subcort_statslabels is None:
             raise ValueError(
                 'subcort_statslabels must not be None if subcortical is True')
-        subcort = subcortical_workflow(debug=debug)
+        subcort = subcortical_workflow(debug=debug, num_threads=num_threads)
         subcort_stats = image_stats_wf(['volume', 'mean'],
                                        subcort_statslabels,
                                        'subcortical_stats')
@@ -414,7 +417,7 @@ def main_workflow(statslabels,
              outputspec, [('outputspec.out_file', 'subcortical_stats')])
         ])
     if icv:
-        icv_wf = icv_workflow()
+        icv_wf = icv_workflow(num_threads=num_threads)
         icv_stats = image_stats_wf(['volume'],
                                    [OrderedDict(index=1, name='ICV')],
                                    'icv_stats')
