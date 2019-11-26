@@ -5,14 +5,14 @@ from .utils import _update_workdir
 
 
 def group_workflow(args):
-    groupdir = args.out_dir / 'group'
+    groupdir = args.output_folder / 'group'
     groupdir.mkdir(exist_ok=True)
     outfile = groupdir / 'group.tsv'
     # if outfile.exists():
     #     raise FileExistsError(f'{outfile} exists')
     wf = pe.Workflow('group')
     combine = pe.Node(
-        CombineStats(bids_dir=str(args.out_dir),
+        CombineStats(bids_dir=str(args.output_folder),
                      validate=not args.skip_validation,
                      row_keys=[
                          'subject',
