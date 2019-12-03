@@ -93,15 +93,19 @@ def preproc_workflow(bet_frac,
     return wf
 
 
-def ants_workflow(debug=False, num_threads=-1):
+def ants_workflow(debug=False, num_threads=1):
     wf = pe.Workflow(name='ants')
     inputspec = pe.Node(
         IdentityInterface(
-            fields=['normalized', 'model', 'tags', 'model_brain_mask']),
+            fields=['normalized', 'brain_mask', 'model', 'tags', 'model_brain_mask']),
         'inputspec')
     converttags = pe.Node(
         pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
     nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
+    merge_fixed = pe.Node(Merge(3), 'merge_fixed')
+    merge_moving = pe.Node(Merge(3), 'merge_moving')
+    merge_fixed.inputs.in3 = 'NULL'
+    merge_moving.inputs.in3 = 'NULL'
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
                                              [1, 1, 1, 1]]
@@ -126,6 +130,12 @@ def ants_workflow(debug=False, num_threads=-1):
         ]),
         'outputspec')
     wf.connect([
+        (inputspec, merge_fixed, [('brain_mask', 'in1'),
+                                  ('brain_mask', 'in2')]),
+        (inputspec, merge_moving, [('model_brain_mask', 'in1'),
+                                   ('model_brain_mask', 'in2')]),
+        (merge_fixed, nlreg, [('out', 'fixed_image_masks')]),
+        (merge_moving, nlreg, [('out', 'moving_image_masks')]),
         (inputspec,
          nlreg, [('normalized', 'fixed_image'), ('model', 'moving_image')]),
         (nlreg, trinvmerge, [('inverse_composite_transform', 'in1')]),
@@ -185,7 +195,7 @@ def classify_workflow(max_shear_angle):
     return wf
 
 
-def segment_lobes_workflow(num_threads=-1):
+def segment_lobes_workflow(num_threads=1):
     wf = pe.Workflow(name='segment_lobes')
     inputspec = pe.Node(
         IdentityInterface(fields=['classified', 'transform', 'atlas']),
@@ -212,16 +222,21 @@ def segment_lobes_workflow(num_threads=-1):
     return wf
 
 
-def subcortical_workflow(debug=False, num_threads=-1):
+def subcortical_workflow(debug=False, num_threads=1):
     wf = pe.Workflow(name='subcortical')
     inputspec = pe.Node(
         IdentityInterface(
-            fields=['normalized', 'subcortical_model', 'subcortical_atlas']),
+            fields=['normalized', 'brain_mask', 'subcortical_model', 'subcortical_model_brain_mask', 'subcortical_atlas']),
         'inputspec')
     nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
                                              [1, 1, 1, 1]]
+    merge_fixed = pe.Node(Merge(3), 'merge_fixed')
+    merge_moving = pe.Node(Merge(3), 'merge_moving')
+    merge_fixed.inputs.in3 = 'NULL'
+    merge_moving.inputs.in3 = 'NULL'
+
     tratlas = pe.Node(
         resampling.ApplyTransforms(dimension=3, interpolation='MultiLabel', num_threads=num_threads),
         'tratlas')
@@ -238,6 +253,12 @@ def subcortical_workflow(debug=False, num_threads=-1):
                  nlreg,
                  [('normalized', 'fixed_image'),
                   ('subcortical_model', 'moving_image')]),
+                (inputspec, merge_fixed, [('brain_mask', 'in1'),
+                                          ('brain_mask', 'in2')]),
+                (inputspec, merge_moving, [('subcortical_model_brain_mask', 'in1'),
+                                           ('subcortical_model_brain_mask', 'in2')]),
+                (merge_fixed, nlreg, [('out', 'fixed_image_masks')]),
+                (merge_moving, nlreg, [('out', 'moving_image_masks')]),
                 (inputspec, tratlas, [('subcortical_atlas', 'input_image')]),
                 (nlreg, tratlas, [('composite_transform', 'transforms')]),
                 (inputspec, tratlas, [('normalized', 'reference_image')]),
@@ -252,7 +273,7 @@ def subcortical_workflow(debug=False, num_threads=-1):
     return wf
 
 
-def icv_workflow(num_threads=-1):
+def icv_workflow(num_threads=1):
     wf = pe.Workflow('icv')
     inputspec = pe.Node(
         IdentityInterface(fields=['icv_mask', 'transform', 'nu_bet']),
@@ -282,7 +303,7 @@ def main_workflow(statslabels,
                   icv=False,
                   debug=False,
                   max_shear_angle=1e-6,
-                  num_threads=-1):
+                  num_threads=1):
     wf = pe.Workflow(name='main')
     inputfields = ['T1', 'model', 'tags', 'atlas', 'model_brain_mask']
     outputfields = [
@@ -305,9 +326,10 @@ def main_workflow(statslabels,
         'transformed_model_brain_mask'
     ]
     if subcortical:
-        inputfields.extend(['subcortical_model', 'subcortical_atlas'])
+        inputfields.extend(['subcortical_model', 'subcortical_atlas', 'subcortical_model_brain_mask'])
         outputfields.extend([
             'subcortical_model',
+            'subcortical_model_brain_mask',
             'subcortical_atlas',
             'subcortical_transform',
             'subcortical_inverse_transform',
@@ -339,6 +361,7 @@ def main_workflow(statslabels,
     for qformf in qformfiles:
         wf.connect(inputspec, qformf, forceqform, f'inputspec.{qformf}')
         wf.connect(forceqform, f'outputspec.{qformf}', outputspec, qformf)
+
     wf.connect([
         (forceqform, pp, [('outputspec.T1', 'inputspec.T1')]),
         (forceqform,
@@ -346,7 +369,8 @@ def main_workflow(statslabels,
          [('outputspec.model', 'inputspec.model'),
           ('outputspec.model_brain_mask', 'inputspec.model_brain_mask')]),
         (inputspec, ants, [('tags', 'inputspec.tags')]),
-        (pp, ants, [('outputspec.normalized', 'inputspec.normalized')]),
+        (pp, ants, [('outputspec.normalized', 'inputspec.normalized'),
+                    ('outputspec.brain_mask', 'inputspec.brain_mask')]),
         (pp, classify, [('outputspec.nu_bet', 'inputspec.nu_bet'),
                         ('outputspec.brain_mask', 'inputspec.brain_mask')]),
         (ants, classify, [('outputspec.trminctags', 'inputspec.trminctags')]),
@@ -397,8 +421,10 @@ def main_workflow(statslabels,
             (forceqform,
              subcort,
              [('outputspec.subcortical_model', 'inputspec.subcortical_model'),
-              ('outputspec.subcortical_atlas', 'inputspec.subcortical_atlas')]),
-            (pp, subcort, [('outputspec.normalized', 'inputspec.normalized')]),
+              ('outputspec.subcortical_atlas', 'inputspec.subcortical_atlas'),
+              ('outputspec.subcortical_model_brain_mask', 'inputspec.subcortical_model_brain_mask')]),
+            (pp, subcort, [('outputspec.normalized', 'inputspec.normalized'),
+                           ('outputspec.brain_mask', 'inputspec.brain_mask')]),
             (subcort,
              outputspec,
              [('outputspec.subcortical_transform', 'subcortical_transform'),

@@ -284,6 +284,12 @@ def _get_parser(for_doc=False):
         type=_resolve_existing_path,
         help='A label file mapping the labels in "--subcortical_atlas" '
         'to structure names')
+    parser_p.add_argument('--subcortical_model_brain_mask',
+                          type=_resolve_existing_path,
+                          default=_model('colin27_t1_tal_lin_mask.nii.gz',
+                                         for_doc=for_doc),
+                          help='Brain mask for subcortical_model. '
+                          'REQUIRED if "--subcortical" is set.')
     parser_p.add_argument('--intracranial_mask',
                           type=_resolve_existing_path,
                           default=_model('SYS808_icv.nii.gz', for_doc=for_doc),
@@ -305,9 +311,8 @@ def _get_parser(for_doc=False):
                                'node based on the profiling run.')
     parser_p.add_argument('--ants_n_proc',
                           type=int,
-                          default=-1,
-                          help='Number of processors to use for ANTs tools. '
-                          '-1 means determine automatically.')
+                          default=1,
+                          help='Number of processors to use for ANTs tools.')
     parser_q = parser.add_argument_group(
         'QC Pages Arguments',
         description='Arguments for qcpages analysis level')
@@ -378,6 +383,7 @@ def _update_args(args):
         if args.subcortical:
             for req in [
                     'subcortical_model',
+                    'subcortical_model_brain_mask',
                     'subcortical_atlas',
                     'subcortical_model_space'
             ]:

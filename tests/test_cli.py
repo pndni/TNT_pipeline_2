@@ -1,6 +1,7 @@
 import subprocess
 from pkg_resources import resource_filename
 from shutil import copyfile
+from multiprocessing import cpu_count
 
 
 def test_cli(tmp_path):
@@ -12,7 +13,8 @@ def test_cli(tmp_path):
     outdir = tmp_path / 'out'
     outdir.mkdir()
     cmd = ['TNT_pipeline_2', str(indir), str(outdir), 'participant',
-           '--subcortical', '--intracranial_volume', '--skip_validation', '--debug']
+           '--subcortical', '--intracranial_volume', '--skip_validation', '--debug',
+           '--ants_n_proc', str(cpu_count())]
     subprocess.check_call(cmd)
     cmd = ['TNT_pipeline_2', str(indir), str(outdir), 'qcpages',
            '--subcortical', '--intracranial_volume', '--skip_validation']

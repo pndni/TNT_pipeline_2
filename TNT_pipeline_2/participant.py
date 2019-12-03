@@ -52,10 +52,11 @@ def _set_resource_data(wf, fname):
         if nameadj in data:
             if not hasattr(node._interface.inputs, 'num_threads'):
                 node.n_procs = int(data[nameadj]['ncpu'])
+                logger.info(f'Set {node} (fullname {fullname}) n_procs to {node.n_procs}')
             # This is a bit of a hack because Node does not define a setter
             # for mem_gb
             node._mem_gb = float(data[nameadj]['mem'])
-            logger.info(f'Set {node} (fullname {fullname}) _mem_gb to {node._mem_gb} and n_procs to {node.n_procs}')
+            logger.info(f'Set {node} (fullname {fullname}) _mem_gb to {node._mem_gb}')
 
 
 def t1_workflow(T1_scan, entities, outbidslayout, args):
@@ -160,6 +161,7 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
         if args.subcortical:
             main_wf.inputs.inputspec.subcortical_model = args.subcortical_model
             main_wf.inputs.inputspec.subcortical_atlas = args.subcortical_atlas
+            main_wf.inputs.inputspec.subcortical_model_brain_mask = args.subcortical_model_brain_mask
         if args.intracranial_volume:
             main_wf.inputs.inputspec.icv_mask = args.intracranial_mask
         connectspec = [(f'outputspec.{connectname}',
