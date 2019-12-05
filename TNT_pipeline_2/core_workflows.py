@@ -94,6 +94,7 @@ def preproc_workflow(bet_frac,
 
 
 def ants_workflow(debug=False, num_threads=1):
+    # TODO probably can drop model_brain_mask
     wf = pe.Workflow(name='ants')
     inputspec = pe.Node(
         IdentityInterface(
@@ -103,9 +104,8 @@ def ants_workflow(debug=False, num_threads=1):
         pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
     nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
     merge_fixed = pe.Node(Merge(3), 'merge_fixed')
-    merge_moving = pe.Node(Merge(3), 'merge_moving')
-    merge_fixed.inputs.in3 = 'NULL'
-    merge_moving.inputs.in3 = 'NULL'
+    merge_fixed.inputs.in1 = 'NULL'
+    merge_fixed.inputs.in2 = 'NULL'
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
                                              [1, 1, 1, 1]]
@@ -130,12 +130,8 @@ def ants_workflow(debug=False, num_threads=1):
         ]),
         'outputspec')
     wf.connect([
-        (inputspec, merge_fixed, [('brain_mask', 'in1'),
-                                  ('brain_mask', 'in2')]),
-        (inputspec, merge_moving, [('model_brain_mask', 'in1'),
-                                   ('model_brain_mask', 'in2')]),
+        (inputspec, merge_fixed, [('brain_mask', 'in3')]),
         (merge_fixed, nlreg, [('out', 'fixed_image_masks')]),
-        (merge_moving, nlreg, [('out', 'moving_image_masks')]),
         (inputspec,
          nlreg, [('normalized', 'fixed_image'), ('model', 'moving_image')]),
         (nlreg, trinvmerge, [('inverse_composite_transform', 'in1')]),
