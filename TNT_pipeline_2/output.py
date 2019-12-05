@@ -17,19 +17,20 @@ def get_outputinfo(model_space,
     }
     outputinfo['model'] = {
         'space': model_space,
+        'desc': model_space,
         'suffix': 'T1w',
         'extension': 'nii.gz'
     }
     outputinfo['atlas'] = {
         'space': model_space,
         'suffix': 'dseg',
-        'desc': 'lobes',
+        'desc': f'{model_space}lobes',
         'extension': 'nii.gz'
     }
     outputinfo['model_brain_mask'] = {
         'space': model_space,
         'suffix': 'mask',
-        'desc': 'brain',
+        'desc': f'{model_space}brain',
         'extension': 'nii.gz'
     }
     outputinfo['nu'] = {
@@ -85,7 +86,7 @@ def get_outputinfo(model_space,
     outputinfo['transformed_atlas'] = {
         'suffix': 'dseg',
         'space': 'T1w',
-        'desc': 'lobes',
+        'desc': f'{model_space}lobes',
         'extension': 'nii.gz'
     }
     outputinfo['segmented'] = {
@@ -125,14 +126,14 @@ def get_outputinfo(model_space,
         }
         outputinfo['subcortical_model'] = {
             'space': subcortical_model_space,
-            'desc': 'subcortex',
+            'desc': f'subcortex{subcortical_model_space}',
             'suffix': 'T1w',
             'extension': 'nii.gz'
         }
         outputinfo['subcortical_atlas'] = {
             'space': subcortical_model_space,
             'suffix': 'dseg',
-            'desc': 'subcortex',
+            'desc': f'subcortex{subcortical_model_space}atlas',
             'extension': 'nii.gz'
         }
         outputinfo['warped_subcortical_model'] = {
@@ -144,7 +145,7 @@ def get_outputinfo(model_space,
         outputinfo['native_subcortical_atlas'] = {
             'suffix': 'dseg',
             'space': 'T1w',
-            'desc': 'subcortex',
+            'desc': f'subcortex{subcortical_model_space}atlas',
             'extension': 'nii.gz'
         }
         outputinfo['subcortical_stats'] = {
@@ -154,13 +155,13 @@ def get_outputinfo(model_space,
         outputinfo['icv_mask'] = {
             'suffix': 'mask',
             'space': model_space,
-            'desc': 'ICV',
+            'desc': f'{model_space}ICV',
             'extension': 'nii.gz'
         }
         outputinfo['native_icv_mask'] = {
             'suffix': 'mask',
             'space': 'T1w',
-            'desc': 'ICV',
+            'desc': f'{model_space}ICV',
             'extension': 'nii.gz'
         }
         outputinfo['icv_stats'] = {
