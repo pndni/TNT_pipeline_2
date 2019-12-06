@@ -101,14 +101,20 @@ def ants_workflow(debug=False, num_threads=1):
         'inputspec')
     converttags = pe.Node(
         pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
-    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
+
+    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads,
+                                               smoothing_sigmas=[[3, 2, 1, 0], [3, 2, 1, 0], [2, 1, 0]],
+                                               shrink_factors=[[8, 4, 2, 1], [8, 4, 2, 1], [4, 2, 1]],
+                                               number_of_iterations=[[1000, 500, 250, 100],
+                                                                     [1000, 500, 250, 100],
+                                                                     [70, 50, 20]]), 'nlreg')
     merge_fixed = pe.Node(Merge(3), 'merge_fixed')
     merge_moving = pe.Node(Merge(3), 'merge_moving')
     merge_fixed.inputs.in3 = 'NULL'
     merge_moving.inputs.in3 = 'NULL'
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
-                                             [1, 1, 1, 1]]
+                                             [1, 1, 1]]
     trinvmerge = pe.Node(Merge(1), 'trinvmerge')
     trpoints = pe.Node(resampling.ApplyTransformsToPoints(dimension=3, num_threads=num_threads),
                        'trpoints')
