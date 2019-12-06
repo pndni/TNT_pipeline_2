@@ -105,7 +105,6 @@ def ants_workflow(debug=False, num_threads=1):
     merge_fixed = pe.Node(Merge(3), 'merge_fixed')
     merge_moving = pe.Node(Merge(3), 'merge_moving')
     merge_fixed.inputs.in3 = 'NULL'
-    merge_moving.inputs.in3 = 'NULL'
     if debug:
         nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
                                              [1, 1, 1, 1]]
@@ -133,7 +132,8 @@ def ants_workflow(debug=False, num_threads=1):
         (inputspec, merge_fixed, [('brain_mask', 'in1'),
                                   ('brain_mask', 'in2')]),
         (inputspec, merge_moving, [('model_brain_mask', 'in1'),
-                                   ('model_brain_mask', 'in2')]),
+                                   ('model_brain_mask', 'in2'),
+                                   ('model_brain_mask', 'in3')]),
         (merge_fixed, nlreg, [('out', 'fixed_image_masks')]),
         (merge_moving, nlreg, [('out', 'moving_image_masks')]),
         (inputspec,
