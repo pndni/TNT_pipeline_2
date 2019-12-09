@@ -101,7 +101,22 @@ def ants_workflow(debug=False, num_threads=1):
         'inputspec')
     converttags = pe.Node(
         pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
-    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
+    nlregparams = dict(
+                       metric=['MI', 'MI'],
+                       metric_weight=[1.0, 1.0],
+                       radius_or_number_of_bins=[32, 32],
+                       sampling_strategy=['Regular', 'Regular'],
+                       sampling_percentage=[0.25, 0.25],
+                       transforms=['Rigid', 'Affine'],
+                       transform_parameters=[(0.1, ), (0.1, )],
+                       smoothing_sigmas=[[3, 2, 1, 0], [3, 2, 1, 0]],
+                       sigma_units=['vox', 'vox'],
+                       shrink_factors=[[8, 4, 2, 1], [8, 4, 2, 1]],
+                       number_of_iterations=[[1000, 500, 250, 100],
+                                             [1000, 500, 250, 100]],
+                       convergence_threshold=[1e-6, 1e-6],
+                       convergence_window_size=[10, 10])
+    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads, **nlregparams), 'nlreg')
     merge_fixed = pe.Node(Merge(3), 'merge_fixed')
     # merge_moving = pe.Node(Merge(3), 'merge_moving')
     merge_fixed.inputs.in3 = 'NULL'
