@@ -6,7 +6,7 @@ from pndniworkflows.interfaces import utils  # import GunzipOrIdent, MergeDictio
 from pndniworkflows.interfaces import minc  # .minc import Nii2mnc, NUCorrect, Mnc2nii, INormalize, Classify
 from nipype.interfaces import fsl
 from nipype.interfaces.ants import resampling
-from pndniworkflows.registration import ants_registration_syn_node
+from pndniworkflows.registration import ants_registration_syn_no_affine_node, ants_registration_affine_node, ants_registration_syn_node
 from pndniworkflows.interfaces import pndni_utils
 from pndniworkflows.postprocessing import image_stats_wf
 
@@ -101,14 +101,13 @@ def ants_workflow(debug=False, num_threads=1):
         'inputspec')
     converttags = pe.Node(
         pndni_utils.ConvertPoints(out_format='ants'), 'converttags')
-    nlreg = pe.Node(ants_registration_syn_node(verbose=True, num_threads=num_threads), 'nlreg')
-    merge_fixed = pe.Node(Merge(3), 'merge_fixed')
-    merge_moving = pe.Node(Merge(3), 'merge_moving')
-    merge_fixed.inputs.in3 = 'NULL'
-    merge_moving.inputs.in3 = 'NULL'
+    masknorm = pe.Node(fsl.ImageMaths(), 'masknorm')
+    maskmodel = pe.Node(fsl.ImageMaths(), 'maskmodel')
+    linreg = pe.Node(ants_registration_affine_node(verbose=True, num_threads=num_threads), 'linreg')
+    nlreg = pe.Node(ants_registration_syn_no_affine_node(verbose=True, num_threads=num_threads), 'nlreg')
     if debug:
-        nlreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1],
-                                             [1, 1, 1, 1]]
+        linreg.inputs.number_of_iterations = [[1, 1, 1, 1], [1, 1, 1, 1]]
+        nlreg.inputs.number_of_iterations = [[1, 1, 1, 1]]
     trinvmerge = pe.Node(Merge(1), 'trinvmerge')
     trpoints = pe.Node(resampling.ApplyTransformsToPoints(dimension=3, num_threads=num_threads),
                        'trpoints')
@@ -130,12 +129,13 @@ def ants_workflow(debug=False, num_threads=1):
         ]),
         'outputspec')
     wf.connect([
-        (inputspec, merge_fixed, [('brain_mask', 'in1'),
-                                  ('brain_mask', 'in2')]),
-        (inputspec, merge_moving, [('model_brain_mask', 'in1'),
-                                   ('model_brain_mask', 'in2')]),
-        (merge_fixed, nlreg, [('out', 'fixed_image_masks')]),
-        (merge_moving, nlreg, [('out', 'moving_image_masks')]),
+        (inputspec, masknorm, [('normalized', 'in_file'),
+                               ('brain_mask', 'mask_file')]),
+        (inputspec, maskmodel, [('model', 'in_file'),
+                                ('model_brain_mask', 'mask_file')]),
+        (masknorm, linreg, [('out_file', 'fixed_image')]),
+        (maskmodel, linreg, [('out_file', 'moving_image')]),
+        (linreg, nlreg, [('composite_transform', 'initial_moving_transform')]),
         (inputspec,
          nlreg, [('normalized', 'fixed_image'), ('model', 'moving_image')]),
         (nlreg, trinvmerge, [('inverse_composite_transform', 'in1')]),
