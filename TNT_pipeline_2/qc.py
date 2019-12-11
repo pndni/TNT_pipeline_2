@@ -152,7 +152,7 @@ def make_config(model_space,
             "type": "contour",
             "name": "ICV mask",
             "image": "T1",
-            "labelimage": "native_icv_mask"
+            "labelimage": "native_intracranial_mask"
         })
         fields.append("Poor ICV mask registraton")
     conf['reportlets'].extend([
