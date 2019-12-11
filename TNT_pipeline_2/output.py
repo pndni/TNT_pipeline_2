@@ -15,24 +15,24 @@ def get_outputinfo(model_space,
         'suffix': 'T1w',
         'extension': 'nii.gz'
     }
-    outputinfo['model'] = {
-        'space': model_space,
-        'desc': model_space,
-        'suffix': 'T1w',
-        'extension': 'nii.gz'
-    }
-    outputinfo['atlas'] = {
-        'space': model_space,
-        'suffix': 'dseg',
-        'desc': f'{model_space}lobes',
-        'extension': 'nii.gz'
-    }
-    outputinfo['model_brain_mask'] = {
-        'space': model_space,
-        'suffix': 'mask',
-        'desc': f'{model_space}brain',
-        'extension': 'nii.gz'
-    }
+    # outputinfo['model'] = {
+    #     'space': model_space,
+    #     'desc': model_space,
+    #     'suffix': 'T1w',
+    #     'extension': 'nii.gz'
+    # }
+    # outputinfo['atlas'] = {
+    #     'space': model_space,
+    #     'suffix': 'dseg',
+    #     'desc': f'{model_space}lobes',
+    #     'extension': 'nii.gz'
+    # }
+    # outputinfo['model_brain_mask'] = {
+    #     'space': model_space,
+    #     'suffix': 'mask',
+    #     'desc': f'{model_space}brain',
+    #     'extension': 'nii.gz'
+    # }
     outputinfo['nu'] = {
         'skullstripped': 'false',
         'desc': 'nucor',
@@ -124,18 +124,18 @@ def get_outputinfo(model_space,
             'mode': 'image',
             'extension': 'h5'
         }
-        outputinfo['subcortical_model'] = {
-            'space': subcortical_model_space,
-            'desc': f'subcortex{subcortical_model_space}',
-            'suffix': 'T1w',
-            'extension': 'nii.gz'
-        }
-        outputinfo['subcortical_atlas'] = {
-            'space': subcortical_model_space,
-            'suffix': 'dseg',
-            'desc': f'subcortex{subcortical_model_space}atlas',
-            'extension': 'nii.gz'
-        }
+        # outputinfo['subcortical_model'] = {
+        #     'space': subcortical_model_space,
+        #     'desc': f'subcortex{subcortical_model_space}',
+        #     'suffix': 'T1w',
+        #     'extension': 'nii.gz'
+        # }
+        # outputinfo['subcortical_atlas'] = {
+        #     'space': subcortical_model_space,
+        #     'suffix': 'dseg',
+        #     'desc': f'subcortex{subcortical_model_space}atlas',
+        #     'extension': 'nii.gz'
+        # }
         outputinfo['warped_subcortical_model'] = {
             'space': 'T1w',
             'suffix': 'T1w',
@@ -152,13 +152,13 @@ def get_outputinfo(model_space,
             'suffix': 'stats', 'desc': 'subcortex', 'extension': 'tsv'
         }
     if intracranial_volume:
-        outputinfo['icv_mask'] = {
-            'suffix': 'mask',
-            'space': model_space,
-            'desc': f'{model_space}ICV',
-            'extension': 'nii.gz'
-        }
-        outputinfo['native_icv_mask'] = {
+        # outputinfo['intracranial_mask'] = {
+        #     'suffix': 'mask',
+        #     'space': model_space,
+        #     'desc': f'{model_space}ICV',
+        #     'extension': 'nii.gz'
+        # }
+        outputinfo['native_intracranial_mask'] = {
             'suffix': 'mask',
             'space': 'T1w',
             'desc': f'{model_space}ICV',

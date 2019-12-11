@@ -286,7 +286,7 @@ def _get_parser(for_doc=False):
         'to structure names')
     parser_p.add_argument('--subcortical_model_brain_mask',
                           type=_resolve_existing_path,
-                          default=_model('colin27_t1_tal_lin_mask.nii.gz',
+                          default=_model('colin27_t1_tal_lin_mask2.nii.gz',
                                          for_doc=for_doc),
                           help='Brain mask for subcortical_model. '
                           'REQUIRED if "--subcortical" is set.')

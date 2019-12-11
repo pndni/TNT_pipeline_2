@@ -1,10 +1,10 @@
 from nipype.pipeline import engine as pe
-from nipype import Rename
+from nipype import Rename, IdentityInterface
 from pndniworkflows import utils
 from pathlib import Path
 from bids import BIDSLayout
 
-from .core_workflows import main_workflow
+from .core_workflows import main_workflow, forceqform_workflow
 from . import output
 from .utils import _update_workdir, read_json, adjust_node_name
 from nipype.interfaces import fsl
@@ -19,11 +19,38 @@ def participant_workflow(args):
                                                    validate=False)
 
     wf = pe.Workflow(name='participant')
+    if not args.debug_io:
+        qformfiles = ['model', 'model_brain_mask', 'atlas']
+        if args.subcortical:
+            qformfiles.extend(['subcortical_model', 'subcortical_model_brain_mask', 'subcortical_atlas'])
+        if args.intracranial_volume:
+            qformfiles.append('intracranial_mask')
+        qformwf = forceqform_workflow(qformfiles, args.max_shear_angle)
+        for qformfile in qformfiles:
+            setattr(qformwf.inputs.inputspec, qformfile, getattr(args, qformfile))
+        t1inputspec = qformfiles + ['model_brain']
+        maskmodel = pe.Node(fsl.ImageMaths(), 'maskmodel')
+        wf.connect([(qformwf, maskmodel, [('outputspec.model', 'in_file'),
+                                          ('outputspec.model_brain_mask', 'mask_file')])])
+        if args.subcortical:
+            masksubcortmodel = pe.Node(fsl.ImageMaths(), 'masksubcortmodel')
+            wf.connect([(qformwf, masksubcortmodel, [('outputspec.subcortical_model', 'in_file'),
+                                                     ('outputspec.subcortical_model_brain_mask', 'mask_file')])])
+            t1inputspec.append('subcortical_model_brain')
+    else:
+        t1inputspec = []
     for T1_scan, T1_entities in _get_scans(
             inbidslayout, args.bids_filter,
             subject_list=args.participant_labels):
-        tmpwf = t1_workflow(T1_scan, T1_entities, outbidslayout, args)
-        wf.add_nodes([tmpwf])
+        tmpwf = t1_workflow(T1_scan, T1_entities, outbidslayout, args, t1inputspec)
+        if not args.debug_io:
+            for qformfile in qformfiles:
+                wf.connect(qformwf, f'outputspec.{qformfile}', tmpwf, f'inputspec.{qformfile}')
+            wf.connect(maskmodel, 'out_file', tmpwf, 'inputspec.model_brain')
+            if args.subcortical:
+                wf.connect(masksubcortmodel, 'out_file', tmpwf, 'inputspec.subcortical_model_brain')
+        else:
+            wf.add_nodes([tmpwf])
     _update_workdir(wf, args.working_directory)
     if args.resource_input_file is not None:
         _set_resource_data(wf, args.resource_input_file)
@@ -59,7 +86,7 @@ def _set_resource_data(wf, fname):
             logger.info(f'Set {node} (fullname {fullname}) _mem_gb to {node._mem_gb}')
 
 
-def t1_workflow(T1_scan, entities, outbidslayout, args):
+def t1_workflow(T1_scan, entities, outbidslayout, args, inputfiles):
     wf = pe.Workflow(name='T1_' +
                      '_'.join((f'{key}-{val}'
                                for key, val in entities.items())))
@@ -94,9 +121,6 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
         renameitr.inputs.in_file = T1_scan
         renamefeatures.inputs.in_file = T1_scan
         io_out_wf.inputs.inputspec.T1 = T1_scan
-        io_out_wf.inputs.inputspec.model = T1_scan
-        io_out_wf.inputs.inputspec.atlas = T1_scan
-        io_out_wf.inputs.inputspec.model_brain_mask = T1_scan
         io_out_wf.inputs.inputspec.nu = T1_scan
         io_out_wf.inputs.inputspec.normalized = T1_scan
         io_out_wf.inputs.inputspec.brain_mask = T1_scan
@@ -124,8 +148,6 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
                 'renamesubitr')
             renamesubtr.inputs.in_file = T1_scan
             renamesubitr.inputs.in_file = T1_scan
-            io_out_wf.inputs.inputspec.subcortical_model = T1_scan
-            io_out_wf.inputs.inputspec.subcortical_atlas = T1_scan
             io_out_wf.inputs.inputspec.warped_subcortical_model = T1_scan
             io_out_wf.inputs.inputspec.native_subcortical_atlas = T1_scan
             io_out_wf.inputs.inputspec.subcortical_stats = T1_scan
@@ -137,10 +159,10 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
                               'inputspec.subcortical_inverse_transform')])
             ])
         if args.intracranial_volume:
-            io_out_wf.inputs.inputspec.icv_mask = T1_scan
-            io_out_wf.inputs.inputspec.native_icv_mask = T1_scan
+            io_out_wf.inputs.inputspec.native_intracranial_mask = T1_scan
             io_out_wf.inputs.inputspec.icv_stats = T1_scan
     else:
+        inputspec = pe.Node(IdentityInterface(fields=inputfiles), 'inputspec')
         main_wf = main_workflow(
             args.tissue_and_atlas_labels.labels,
             args.bet_frac,
@@ -153,17 +175,11 @@ def t1_workflow(T1_scan, entities, outbidslayout, args):
             icv=args.intracranial_volume,
             max_shear_angle=args.max_shear_angle,
             num_threads=args.ants_n_proc)
-        main_wf.inputs.inputspec.model = args.model
         main_wf.inputs.inputspec.tags = args.tags
-        main_wf.inputs.inputspec.atlas = args.atlas
-        main_wf.inputs.inputspec.model_brain_mask = args.model_brain_mask
         main_wf.inputs.inputspec.T1 = T1_scan
-        if args.subcortical:
-            main_wf.inputs.inputspec.subcortical_model = args.subcortical_model
-            main_wf.inputs.inputspec.subcortical_atlas = args.subcortical_atlas
-            main_wf.inputs.inputspec.subcortical_model_brain_mask = args.subcortical_model_brain_mask
-        if args.intracranial_volume:
-            main_wf.inputs.inputspec.icv_mask = args.intracranial_mask
+        connectspec = [(f'{connectname}', f'inputspec.{connectname}')
+                       for connectname in inputfiles]
+        wf.connect([(inputspec, main_wf, connectspec)])
         connectspec = [(f'outputspec.{connectname}',
                         f'inputspec.{connectname}')
                        for connectname in output.get_outputinfo(
