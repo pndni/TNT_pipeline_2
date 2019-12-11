@@ -137,7 +137,7 @@ def adjust_node_name(name):
     if namesplit[0] == 'participant':
         T1 = namesplit.pop(1)
         if T1[:3] != 'T1_':
-            raise RuntimeError(f'Unexpected node name: {name}')
+            return name
         nameadj = '.'.join(namesplit)
     else:
         nameadj = name
