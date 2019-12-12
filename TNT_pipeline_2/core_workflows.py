@@ -187,7 +187,8 @@ def classify_workflow(max_shear_angle):
         (tomnc, classify, [('outputspec.out_file', 'in_file')]),
         (classify, tonii, [('out_file', 'inputspec.in_file')]),
         (tonii, outputspec, [('outputspec.out_file', 'classified')]),
-        (inputspec, extract_features, [('trminctags', 'tag_file'), ('brain_mask', 'mask_file')]),
+        (inputspec, extract_features, [('trminctags', 'tag_file')]),
+        (tomnc_brain_mask, extract_features, [('outputspec.out_file', 'mask_file')]),
         (tomnc, extract_features, [('outputspec.out_file', 'in_file')]),
         (extract_features, convert_features, [('features', 'in_file')]),
         (convert_features, outputspec, [('out_file', 'features')]),
@@ -254,9 +255,9 @@ def subcortical_workflow(debug=False, num_threads=1):
                  [('normalized', 'fixed_image'),
                   ('subcortical_model', 'moving_image')]),
                 (linreg, nlreg, [('composite_transform', 'initial_moving_transform')]),
-                (inputspec, tratlas, [('subcortical_atlas', 'input_image')]),
+                (inputspec, tratlas, [('subcortical_atlas', 'input_image'),
+                                      ('normalized', 'reference_image')]),
                 (nlreg, tratlas, [('composite_transform', 'transforms')]),
-                (inputspec, tratlas, [('normalized', 'reference_image')]),
                 (linreg, outputspec, [('composite_transform', 'subcortical_linear_transform')]),
                 (nlreg,
                  outputspec,
@@ -304,10 +305,8 @@ def main_workflow(statslabels,
     inputfields = ['T1', 'model', 'tags', 'atlas', 'model_brain_mask', 'model_brain']
     outputfields = [
         'T1',
-        'atlas',
         'nu',
         'normalized',
-        'normalized_brain',
         'brain_mask',
         'linear_transform',
         'transform',
@@ -324,6 +323,7 @@ def main_workflow(statslabels,
     if subcortical:
         inputfields.extend(['subcortical_model', 'subcortical_atlas', 'subcortical_model_brain_mask', 'subcortical_model_brain'])
         outputfields.extend([
+            'subcortical_linear_transform',
             'subcortical_transform',
             'subcortical_inverse_transform',
             'warped_subcortical_model',
@@ -419,7 +419,8 @@ def main_workflow(statslabels,
                            ('outputspec.normalized_brain', 'inputspec.normalized_brain')]),
             (subcort,
              outputspec,
-             [('outputspec.subcortical_transform', 'subcortical_transform'),
+             [('outputspec.subcortical_linear_transform', 'subcortical_linear_transform'),
+              ('outputspec.subcortical_transform', 'subcortical_transform'),
               ('outputspec.subcortical_inverse_transform',
                'subcortical_inverse_transform'),
               ('outputspec.warped_subcortical_model',
@@ -448,7 +449,8 @@ def main_workflow(statslabels,
             (icv_wf,
              icv_stats, [
                  ('outputspec.native_intracranial_mask', 'inputspec.index_mask_file')
-             ]), (pp, icv_stats, [('outputspec.nu', 'inputspec.in_file')]),
+             ]),
+            (pp, icv_stats, [('outputspec.nu', 'inputspec.in_file')]),
             (icv_stats, outputspec, [('outputspec.out_file', 'icv_stats')])
         ])
     return wf

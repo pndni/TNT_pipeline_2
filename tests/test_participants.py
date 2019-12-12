@@ -5,9 +5,9 @@ from nipype.pipeline.plugins.tools import report_crash
 from PipelineQC.get_files import get_files
 
 NUMANAT = 16
-NUMXFM = 2
+NUMXFM = 3
 NUMANAT_SUB = 4
-NUMXFM_SUB = 2
+NUMXFM_SUB = 3
 NUMANAT_ICV = 2
 NUMXFM_ICV = 0
 

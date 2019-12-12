@@ -109,6 +109,10 @@ def t1_workflow(T1_scan, entities, outbidslayout, args, inputfiles):
             Rename(format_string='%(base)s.h5',
                    parse_string='(?P<base>.*).nii(.gz)?'),
             'renametr')
+        renamelintr = pe.Node(
+            Rename(format_string='%(base)s.h5',
+                   parse_string='(?P<base>.*).nii(.gz)?'),
+            'renamelintr')
         renameitr = pe.Node(
             Rename(format_string='%(base)s.h5',
                    parse_string='(?P<base>.*).nii(.gz)?'),
@@ -118,6 +122,7 @@ def t1_workflow(T1_scan, entities, outbidslayout, args, inputfiles):
                    parse_string='(?P<base>.*).nii(.gz)?'),
             'renamefeatures')
         renametr.inputs.in_file = T1_scan
+        renamelintr.inputs.in_file = T1_scan
         renameitr.inputs.in_file = T1_scan
         renamefeatures.inputs.in_file = T1_scan
         io_out_wf.inputs.inputspec.T1 = T1_scan
@@ -133,6 +138,7 @@ def t1_workflow(T1_scan, entities, outbidslayout, args, inputfiles):
         io_out_wf.inputs.inputspec.transformed_model_brain_mask = T1_scan
         wf.connect([(renametr,
                      io_out_wf, [('out_file', 'inputspec.transform')]),
+                    (renamelintr, io_out_wf, [('out_file', 'inputspec.linear_transform')]),
                     (renameitr,
                      io_out_wf, [('out_file', 'inputspec.inverse_transform')]),
                     (renamefeatures,
@@ -142,11 +148,16 @@ def t1_workflow(T1_scan, entities, outbidslayout, args, inputfiles):
                 Rename(format_string='%(base)s.h5',
                        parse_string='(?P<base>.*).nii(.gz)?'),
                 'renamesubtr')
+            renamesublintr = pe.Node(
+                Rename(format_string='%(base)s.h5',
+                       parse_string='(?P<base>.*).nii(.gz)?'),
+                'renamesublintr')
             renamesubitr = pe.Node(
                 Rename(format_string='%(base)s.h5',
                        parse_string='(?P<base>.*).nii(.gz)?'),
                 'renamesubitr')
             renamesubtr.inputs.in_file = T1_scan
+            renamesublintr.inputs.in_file = T1_scan
             renamesubitr.inputs.in_file = T1_scan
             io_out_wf.inputs.inputspec.warped_subcortical_model = T1_scan
             io_out_wf.inputs.inputspec.native_subcortical_atlas = T1_scan
@@ -154,6 +165,8 @@ def t1_workflow(T1_scan, entities, outbidslayout, args, inputfiles):
             wf.connect([
                 (renamesubtr,
                  io_out_wf, [('out_file', 'inputspec.subcortical_transform')]),
+                (renamesublintr,
+                 io_out_wf, [('out_file', 'inputspec.subcortical_linear_transform')]),
                 (renamesubitr,
                  io_out_wf, [('out_file',
                               'inputspec.subcortical_inverse_transform')])

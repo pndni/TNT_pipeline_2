@@ -127,6 +127,8 @@ def make_config(model_space,
             vtmp['space'] = None
             conf['files'][k] = {'pattern': 'bids', 'filter': vtmp}
         else:
+            if v['extension'] == 'h5':
+                continue
             conf['files'][k] = {'pattern': 'bids', 'filter': v}
 
     fields = ["Poor BET", "Poor regisitration", "Poor classification"]

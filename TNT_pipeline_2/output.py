@@ -51,6 +51,14 @@ def get_outputinfo(model_space,
         'space': 'T1w',
         'extension': 'nii.gz'
     }
+    outputinfo['linear_transform'] = {
+        'from': model_space,
+        'to': 'T1w',
+        'suffix': 'xfm',
+        'mode': 'image',
+        'extension': 'h5',
+        'desc': 'linear'
+    }
     outputinfo['transform'] = {
         'from': model_space,
         'to': 'T1w',
@@ -113,6 +121,14 @@ def get_outputinfo(model_space,
             'from': subcortical_model_space,
             'suffix': 'xfm',
             'desc': 'subcortex',
+            'mode': 'image',
+            'extension': 'h5'
+        }
+        outputinfo['subcortical_linear_transform'] = {
+            'to': 'T1w',
+            'from': subcortical_model_space,
+            'suffix': 'xfm',
+            'desc': 'subcortexlinear',
             'mode': 'image',
             'extension': 'h5'
         }
