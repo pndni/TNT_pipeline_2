@@ -186,6 +186,9 @@ def make_config(model_space,
                 },
                 {
                     "name": "Other", "type": "text"
+                },
+                {
+                    "name": "Rater", "type": "text"
                 }
             ]
         },
