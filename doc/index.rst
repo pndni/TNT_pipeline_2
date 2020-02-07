@@ -11,8 +11,10 @@ Welcome to TNT_pipeline_2's documentation!
    :caption: Contents:
 
    getting_started
+   resource_management
    command_line_usage
    pipeline
+   building_docker
 
 
 Indices and tables

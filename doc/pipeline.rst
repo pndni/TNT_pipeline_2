@@ -18,7 +18,7 @@ Pipeline Overview
       :simple_form: no
 
       from TNT_pipeline_2.core_workflows import preproc_workflow
-      wf = preproc_workflow(0.5, 0.0, [0.0, 5000.0], 1.0)
+      wf = preproc_workflow(0.5, 0.0, [0.0, 5000.0], 1.0, 1e-6)
 
 
 .. autofunction:: TNT_pipeline_2.core_workflows.ants_workflow
@@ -38,7 +38,7 @@ Pipeline Overview
       :simple_form: no
 
       from TNT_pipeline_2.core_workflows import classify_workflow
-      wf = classify_workflow()
+      wf = classify_workflow(1e-6)
 
 
 .. autofunction:: TNT_pipeline_2.core_workflows.segment_lobes_workflow
@@ -88,7 +88,7 @@ Pipeline Overview
       :simple_form: no
 
       from TNT_pipeline_2.core_workflows import toniigz_workflow
-      wf = toniigz_workflow('name')
+      wf = toniigz_workflow('name', 1e-6)
 
 .. autofunction:: TNT_pipeline_2.core_workflows.forceqform_workflow
 
