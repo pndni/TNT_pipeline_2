@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='TNT_pipeline_2',
     version='dev',
+    packages=find_packages(),
     install_requires=[
         'nipype>=1.3.1',
         'pybids>=0.9.4',
